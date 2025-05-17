@@ -1,8 +1,11 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Booking;
+use App\Models\Payment;
+
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
@@ -41,7 +44,7 @@ class BookingController extends Controller
                     $booking->bookingSeats()->create([
                         'booking_seat_id' => Str::uuid(),
                         'seat_id' => $seat_id,
-                    ]); 
+                    ]);
                 }
             }
 
@@ -81,6 +84,33 @@ class BookingController extends Controller
         return response()->json(['code' => 200, 'message' => 'Booking updated', 'data' => $booking]);
     }
 
+    // cap nhat gia tien
+    public function updateTotalPrice(Request $request, $id)
+    {
+        $booking = Booking::find($id);
+        if (!$booking) {
+            return response()->json(['code' => 404, 'message' => 'Booking không tồn tại']);
+        }
+
+        // Kiểm tra nếu đã có payment COMPLETED
+        $hasCompletedPayment = Payment::where('booking_id', $booking->booking_id)
+            ->where('payment_status', 'COMPLETED')
+            ->exists();
+
+        if ($hasCompletedPayment) {
+            return response()->json(['code' => 403, 'message' => 'Booking đã thanh toán, không thể cập nhật giá tiền']);
+        }
+
+        $request->validate([
+            'total_price' => 'required|numeric|min:0',
+        ]);
+
+        $booking->total_price = $request->total_price;
+        $booking->save();
+
+        return response()->json(['code' => 200, 'message' => 'Cập nhật giá tiền thành công', 'data' => $booking]);
+    }
+
     // Xóa booking (soft delete)
     public function destroy($id)
     {
@@ -94,5 +124,4 @@ class BookingController extends Controller
 
         return response()->json(['code' => 200, 'message' => 'Booking deleted']);
     }
-    
 }

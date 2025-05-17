@@ -4,7 +4,7 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SeatController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\BookingController;
-
+use App\Http\Controllers\CouponController;
 use App\Http\Controllers\MovieController;
 use App\Http\Controllers\ShowtimeController;
 use App\Http\Controllers\PaymentController;
@@ -51,6 +51,8 @@ Route::prefix('bookings')->group(function () {
     Route::delete('/soft/{id}', [BookingController::class, 'destroy']); // Xóa mềm booking
     Route::patch('/restore/{id}', [BookingController::class, 'restore']); // Khôi phục booking
     Route::delete('/{id}', [BookingController::class, 'forceDelete']); // Xóa vĩnh viễn booking
+
+    Route::put('/bookings/{id}/total-price', [BookingController::class, 'updateTotalPrice']);
 });
 
 Route::prefix('movies')->group(function () {
@@ -77,16 +79,16 @@ Route::prefix('showtimes')->group(function () {
 });
 
 
-Route::prefix('payments')->group(function () {
+
+
+Route::prefix('payment')->group(function () {
     Route::get('/', [PaymentController::class, 'index']);
     Route::post('/', [PaymentController::class, 'store']);
     Route::get('/{id}', [PaymentController::class, 'show']);
     Route::put('/{id}', [PaymentController::class, 'update']);
-    Route::delete('/soft/{id}', [PaymentController::class, 'softDelete']);
-    Route::patch('/restore/{id}', [PaymentController::class, 'restore']);
-    Route::delete('/{id}', [PaymentController::class, 'forceDelete']);
+    Route::delete('/{id}', [PaymentController::class, 'destroy']);
+    Route::patch('/payments/{id}/complete', [PaymentController::class, 'markCompleted']);
 });
-
 Route::prefix('booking-seats')->group(function () {
     Route::get('/showtimes/{showtimeId}/seats', [BookingSeatController::class, 'getSeatsByShowtime']);
     Route::get('/', [BookingSeatController::class, 'index']);
@@ -97,4 +99,14 @@ Route::prefix('booking-seats')->group(function () {
     Route::delete('/{id}', [BookingSeatController::class, 'forceDelete']);
     Route::delete('/{id}/seats', [BookingSeatController::class, 'forceDelete']);
 
+});
+
+
+Route::prefix('coupons')->group(function () {
+    Route::get('/', [CouponController::class, 'index']);
+    Route::post('/', [CouponController::class, 'store']);
+    Route::get('/{id}', [CouponController::class, 'show']);
+    Route::put('/{id}', [CouponController::class, 'update']);
+    Route::delete('/soft/{id}', [CouponController::class, 'softDelete']); // nếu dùng soft delete
+    Route::delete('/{id}', [CouponController::class, 'forceDelete']); // xóa cứng
 });
