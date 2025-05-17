@@ -1,0 +1,236 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Movie;
+use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
+class MovieController extends Controller
+{
+    // Lấy danh sách phim chưa bị xóa
+    public function index()
+    {
+        $movies = Movie::where('is_deleted', false)->get();
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Lấy danh sách phim thành công',
+            'data' => $movies
+        ]);
+    }
+
+    // Tạo mới phim
+  public function store(Request $request)
+{
+    $request->validate([
+        'title' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'duration' => 'nullable|integer|min:1',
+        'release_date' => 'nullable|date',
+        'director' => 'nullable|string|max:255',
+        'cast' => 'nullable|string',
+        'genre' => 'nullable|string|max:255',
+        'rating' => 'nullable|numeric|min:0|max:10',
+        'poster_url' => 'nullable|url|max:255',
+    ]);
+
+    // Kiểm tra trùng tên phim (chưa bị xóa)
+    $exists = Movie::where('title', $request->title)
+        ->where('is_deleted', false)
+        ->exists();
+
+    if ($exists) {
+        return response()->json([
+            'code' => 409,
+            'message' => 'Tên phim đã tồn tại'
+        ], 409);
+    }
+
+    $movie = Movie::create([
+        'movie_id' => Str::uuid()->toString(),
+        'title' => $request->title,
+        'description' => $request->description,
+        'duration' => $request->duration,
+        'release_date' => $request->release_date,
+        'director' => $request->director,
+        'cast' => $request->cast,
+        'genre' => $request->genre,
+        'rating' => $request->rating,
+        'poster_url' => $request->poster_url,
+        'is_deleted' => false,
+    ]);
+
+    return response()->json([
+        'code' => 201,
+        'message' => 'Tạo phim thành công',
+        'data' => $movie
+    ]);
+}
+
+    // Lấy chi tiết phim theo id
+    public function show($id)
+    {
+        try {
+            $movie = Movie::where('movie_id', $id)
+                ->where('is_deleted', false)
+                ->firstOrFail();
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Lấy thông tin phim thành công',
+                'data' => $movie
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Phim không tồn tại'
+            ]);
+        }
+    }
+
+    // Cập nhật phim
+  public function update(Request $request, $id)
+{
+    try {
+        $movie = Movie::where('movie_id', $id)
+            ->where('is_deleted', false)
+            ->firstOrFail();
+
+        $request->validate([
+            'title' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
+            'duration' => 'nullable|integer|min:1',
+            'release_date' => 'nullable|date',
+            'director' => 'nullable|string|max:255',
+            'cast' => 'nullable|string',
+            'genre' => 'nullable|string|max:255',
+            'rating' => 'nullable|numeric|min:0|max:10',
+            'poster_url' => 'nullable|url|max:255',
+        ]);
+
+        if ($request->has('title')) {
+            // Kiểm tra trùng tên với phim khác (không tính phim này)
+            $exists = Movie::where('title', $request->title)
+                ->where('is_deleted', false)
+                ->where('movie_id', '<>', $id)
+                ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'code' => 409,
+                    'message' => 'Tên phim đã tồn tại'
+                ], 409);
+            }
+        }
+
+        $movie->fill($request->all());
+        $movie->save();
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Cập nhật phim thành công',
+            'data' => $movie
+        ]);
+    } catch (ModelNotFoundException $e) {
+        return response()->json([
+            'code' => 404,
+            'message' => 'Phim không tồn tại'
+        ]);
+    }
+}
+
+    // Xóa mềm phim (is_deleted = true)
+    public function destroy($id)
+    {
+        try {
+            $movie = Movie::where('movie_id', $id)
+                ->where('is_deleted', false)
+                ->firstOrFail();
+
+            $movie->is_deleted = true;
+            $movie->save();
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Xóa phim thành công (soft delete)'
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Phim không tồn tại'
+            ]);
+        }
+    }
+    // Khôi phục phim đã xóa mềm
+    public function restore($id)
+    {
+        try {
+            $movie = Movie::where('movie_id', $id)
+                ->where('is_deleted', true)
+                ->firstOrFail();
+
+            $movie->is_deleted = false;
+            $movie->save();
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Khôi phục phim thành công',
+                'data' => $movie
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Phim không tồn tại hoặc chưa bị xóa'
+            ]);
+        }
+    }
+    // Lấy danh sách phim đã bị xóa mềm
+    public function getDeletedMovies()
+    {
+        $deletedMovies = Movie::where('is_deleted', true)->get();
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Lấy danh sách phim đã xóa thành công',
+            'data' => $deletedMovies
+        ]);
+    }
+
+    // Lọc phim theo tên
+    public function searchByTitle(Request $request)
+    {
+        $keyword = $request->query('title');
+
+        if (!$keyword) {
+            return response()->json([
+                'code' => 400,
+                'message' => 'Thiếu tham số tìm kiếm tên phim'
+            ]);
+        }
+
+        $movies = Movie::where('is_deleted', false)
+            ->where('title', 'like', '%' . $keyword . '%')
+            ->get();
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Tìm kiếm phim theo tên thành công',
+            'data' => $movies
+        ]);
+    }
+
+    public function getNowShowing()
+    {
+        $movies = Movie::where('is_deleted', false)
+            ->where('release_date', '<=', now())
+            ->get();
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Lấy danh sách phim đang chiếu thành công',
+            'data' => $movies
+        ]);
+    }
+}

@@ -1,13 +1,21 @@
 <?php
+
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SeatController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\BookingController;
+
+use App\Http\Controllers\MovieController;
+use App\Http\Controllers\ShowtimeController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\BookingSeatController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('rooms')->group(function () {
     Route::get('/', [RoomController::class, 'index']);             // GET /api/rooms
     Route::post('/', [RoomController::class, 'store']);            // POST /api/rooms
     Route::get('{id}', [RoomController::class, 'show']);           // GET /api/rooms/{id}
-    Route::put('{id}', [RoomController::class, 'update']); 
+    Route::put('{id}', [RoomController::class, 'update']);
     Route::put('update-capacity/{id}', [RoomController::class, 'updateCapacity']);  // PUT /api/rooms/{id}
     Route::delete('soft-delete/{id}', [RoomController::class, 'softDelete']); // DELETE mềm
     Route::patch('restore/{id}', [RoomController::class, 'restore']);          // PATCH khôi phục
@@ -35,3 +43,58 @@ Route::prefix('reviews')->group(function () {
     Route::delete('/{id}', [ReviewController::class, 'destroy']);
 });
 
+Route::prefix('bookings')->group(function () {
+    Route::get('/', [BookingController::class, 'index']);              // GET /api/bookings
+    Route::post('/', [BookingController::class, 'store']);             // POST /api/bookings
+    Route::get('/{id}', [BookingController::class, 'show']);           // GET /api/bookings/{id}
+    Route::put('/{id}', [BookingController::class, 'update']);         // PUT /api/bookings/{id}
+    Route::delete('/soft/{id}', [BookingController::class, 'destroy']); // Xóa mềm booking
+    Route::patch('/restore/{id}', [BookingController::class, 'restore']); // Khôi phục booking
+    Route::delete('/{id}', [BookingController::class, 'forceDelete']); // Xóa vĩnh viễn booking
+});
+
+Route::prefix('movies')->group(function () {
+    Route::get('/', [MovieController::class, 'index']);               // GET /api/movies
+    Route::post('/', [MovieController::class, 'store']);              // POST /api/movies
+    Route::get('/{id}', [MovieController::class, 'show']);            // GET /api/movies/{id}
+    Route::put('/{id}', [MovieController::class, 'update']);          // PUT /api/movies/{id}
+    Route::delete('/soft/{id}', [MovieController::class, 'destroy']);  // DELETE mềm
+    Route::patch('/restore/{id}', [MovieController::class, 'restore']);   // PATCH khôi phục
+    Route::get('/movies/deleted', [MovieController::class, 'getDeletedMovies']);
+    Route::get('/movies/search', [MovieController::class, 'searchByTitle']);
+    Route::get('/movies/search', [MovieController::class, 'searchByTitle']);
+    Route::get('/movies/now-showing', [MovieController::class, 'getNowShowing']);
+});
+
+
+Route::prefix('showtimes')->group(function () {
+    Route::get('/', [ShowtimeController::class, 'index']);
+    Route::post('/', [ShowtimeController::class, 'store']);
+    Route::get('/{id}', [ShowtimeController::class, 'show']);
+    Route::put('/{id}', [ShowtimeController::class, 'update']);
+    Route::delete('/soft/{id}', [ShowtimeController::class, 'destroy']);
+  
+});
+
+
+Route::prefix('payments')->group(function () {
+    Route::get('/', [PaymentController::class, 'index']);
+    Route::post('/', [PaymentController::class, 'store']);
+    Route::get('/{id}', [PaymentController::class, 'show']);
+    Route::put('/{id}', [PaymentController::class, 'update']);
+    Route::delete('/soft/{id}', [PaymentController::class, 'softDelete']);
+    Route::patch('/restore/{id}', [PaymentController::class, 'restore']);
+    Route::delete('/{id}', [PaymentController::class, 'forceDelete']);
+});
+
+Route::prefix('booking-seats')->group(function () {
+    Route::get('/showtimes/{showtimeId}/seats', [BookingSeatController::class, 'getSeatsByShowtime']);
+    Route::get('/', [BookingSeatController::class, 'index']);
+    Route::post('/', [BookingSeatController::class, 'store']);
+    Route::get('/{id}', [BookingSeatController::class, 'show']);
+    Route::put('/{id}', [BookingSeatController::class, 'update']);
+    Route::delete('/soft/{id}', [BookingSeatController::class, 'destroy']);
+    Route::delete('/{id}', [BookingSeatController::class, 'forceDelete']);
+    Route::delete('/{id}/seats', [BookingSeatController::class, 'forceDelete']);
+
+});

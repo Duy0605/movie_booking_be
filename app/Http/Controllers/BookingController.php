@@ -1,0 +1,98 @@
+<?php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Booking;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+
+class BookingController extends Controller
+{
+    // Lấy danh sách booking
+    public function index()
+    {
+        $bookings = Booking::with(['user', 'showtime.movie', 'bookingSeats'])->get();
+        return response()->json(['code' => 200, 'message' => 'Success', 'data' => $bookings]);
+    }
+
+    // Tạo booking mới
+    public function store(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|string|exists:user_account,user_id',
+            'showtime_id' => 'required|string|exists:showtime,showtime_id',
+            'total_price' => 'numeric',
+            'status' => 'in:PENDING,CONFIRMED,CANCELLED',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $booking = Booking::create([
+                'booking_id' => Str::uuid(),
+                'user_id' => $request->user_id,
+                'showtime_id' => $request->showtime_id,
+                'total_price' => $request->total_price,
+                'status' => $request->status ?? 'PENDING',
+                'is_deleted' => false,
+            ]);
+
+            if ($request->has('seat_ids')) {
+                foreach ($request->seat_ids as $seat_id) {
+                    $booking->bookingSeats()->create([
+                        'booking_seat_id' => Str::uuid(),
+                        'seat_id' => $seat_id,
+                    ]); 
+                }
+            }
+
+            DB::commit();
+            return response()->json(['code' => 201, 'message' => 'Tạo booking thành công', 'data' => $booking]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['code' => 500, 'message' => 'Lỗi tạo booking', 'error' => $e->getMessage()]);
+        }
+    }
+
+    // Xem chi tiết booking
+    public function show($id)
+    {
+        $booking = Booking::with(['user', 'showtime.movie', 'bookingSeats'])->find($id);
+        if (!$booking) {
+            return response()->json(['code' => 404, 'message' => 'Booking not found']);
+        }
+        return response()->json(['code' => 200, 'message' => 'Success', 'data' => $booking]);
+    }
+
+    // Cập nhật booking (ví dụ đổi trạng thái)
+    public function update(Request $request, $id)
+    {
+        $booking = Booking::find($id);
+        if (!$booking) {
+            return response()->json(['code' => 404, 'message' => 'Booking not found']);
+        }
+
+        $request->validate([
+            'status' => 'in:PENDING,CONFIRMED,CANCELLED',
+        ]);
+
+        $booking->status = $request->status ?? $booking->status;
+        $booking->save();
+
+        return response()->json(['code' => 200, 'message' => 'Booking updated', 'data' => $booking]);
+    }
+
+    // Xóa booking (soft delete)
+    public function destroy($id)
+    {
+        $booking = Booking::find($id);
+        if (!$booking) {
+            return response()->json(['code' => 404, 'message' => 'Booking not found']);
+        }
+
+        $booking->is_deleted = true;
+        $booking->save();
+
+        return response()->json(['code' => 200, 'message' => 'Booking deleted']);
+    }
+    
+}
