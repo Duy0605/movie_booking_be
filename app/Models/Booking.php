@@ -26,7 +26,7 @@ class Booking extends Model
 
     public function showtime()
     {
-        return $this->belongsTo(Showtime::class, 'showtime_id', 'showtime_id');
+        return $this->belongsTo(ShowTime::class, 'showtime_id', 'showtime_id');
     }
 
     // Lấy movie thông qua showtime
@@ -34,7 +34,7 @@ class Booking extends Model
     {
         return $this->hasOneThrough(
             Movie::class,
-            Showtime::class,
+            ShowTime::class,
             'showtime_id',  // khóa ngoại trên bảng showtime
             'movie_id',     // khóa chính bảng movie
             'showtime_id',  // khóa ngoại trên bảng booking

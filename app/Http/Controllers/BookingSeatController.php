@@ -8,7 +8,7 @@ use App\Models\Booking;
 use App\Models\Seat;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use App\Models\Showtime;
+use App\Models\ShowTime;
 
 class BookingSeatController extends Controller
 {
@@ -50,7 +50,7 @@ class BookingSeatController extends Controller
         }
 
         // Lấy showtime của booking
-        $showtime = Showtime::where('showtime_id', $booking->showtime_id)
+        $showtime = ShowTime::where('showtime_id', $booking->showtime_id)
             ->where('is_deleted', false)
             ->first();
 
@@ -222,7 +222,7 @@ class BookingSeatController extends Controller
     public function getSeatsByShowtime($showtimeId)
     {
         // Lấy suất chiếu
-        $showtime = Showtime::where('showtime_id', $showtimeId)->where('is_deleted', false)->first();
+        $showtime = ShowTime::where('showtime_id', $showtimeId)->where('is_deleted', false)->first();
         if (!$showtime) {
             return response()->json(['code' => 404, 'message' => 'Suất chiếu không tồn tại']);
         }

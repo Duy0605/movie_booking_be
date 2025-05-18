@@ -95,6 +95,25 @@ class ShowTimeController extends Controller
             ]);
         }
     }
+    public function showByMovieId($id)
+    {
+        try {
+            $showtime = ShowTime::where('movie_id', $id)
+                ->where('is_deleted', false)
+                ->firstOrFail();
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Lấy thông tin suất chiếu thành công',
+                'data' => $showtime
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Không tìm thấy suất chiếu'
+            ]);
+        }
+    }
 
     public function update(Request $request, $id)
     {

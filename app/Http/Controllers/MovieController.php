@@ -233,4 +233,16 @@ class MovieController extends Controller
             'data' => $movies
         ]);
     }
+    public function getUpcomingMovie()
+    {
+        $movies = Movie::where('is_deleted', false)
+            ->where('release_date', '>', now())
+            ->get();
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Lấy danh sách phim sắp chiếu thành công',
+            'data' => $movies
+        ]);
+    }
 }

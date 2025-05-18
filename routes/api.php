@@ -6,7 +6,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\MovieController;
-use App\Http\Controllers\ShowtimeController;
+use App\Http\Controllers\ShowTimeController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BookingSeatController;
 use Illuminate\Support\Facades\Route;
@@ -66,15 +66,18 @@ Route::prefix('movies')->group(function () {
     Route::get('/movies/search', [MovieController::class, 'searchByTitle']);
     Route::get('/movies/search', [MovieController::class, 'searchByTitle']);
     Route::get('/movies/now-showing', [MovieController::class, 'getNowShowing']);
+    Route::get('/movies/upcoming-movie', [MovieController::class, 'getUpcomingMovie']);
 });
 
 
 Route::prefix('showtimes')->group(function () {
-    Route::get('/', [ShowtimeController::class, 'index']);
-    Route::post('/', [ShowtimeController::class, 'store']);
-    Route::get('/{id}', [ShowtimeController::class, 'show']);
-    Route::put('/{id}', [ShowtimeController::class, 'update']);
-    Route::delete('/soft/{id}', [ShowtimeController::class, 'destroy']);
+    Route::get('/', [ShowTimeController::class, 'index']);
+    Route::post('/', [ShowTimeController::class, 'store']);
+    Route::get('/{id}', [ShowTimeController::class, 'show']);
+    Route::put('/{id}', [ShowTimeController::class, 'update']);
+    Route::delete('/soft/{id}', [ShowTimeController::class, 'destroy']);
+    Route::get('/movieId/{id}', [ShowTimeController::class, 'showByMovieId']);
+
   
 });
 
