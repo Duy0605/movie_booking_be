@@ -10,11 +10,17 @@ use App\Response\ApiResponse;
 class CinemaController extends Controller
 {
     // Lấy danh sách rạp
-    public function index()
+    public function index(Request $request)
     {
-        $cinemas = Cinema::where('is_deleted', false)->get();
+        $perPage = $request->input('per_page', 10); // Số lượng bản ghi mỗi trang (mặc định 10)
+        $page = $request->input('page', 1);         // Trang hiện tại (mặc định 1)
+
+        $cinemas = Cinema::where('is_deleted', false)
+            ->paginate($perPage, ['*'], 'page', $page);
+
         return ApiResponse::success($cinemas, 'Danh sách rạp chiếu phim');
     }
+
 
     // Tạo mới rạp
     public function store(Request $request)

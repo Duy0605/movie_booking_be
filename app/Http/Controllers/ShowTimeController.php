@@ -11,8 +11,10 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ShowTimeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = $request->input('per_page', 10); // Số bản ghi/trang, mặc định 10
+
         $showtimes = ShowTime::with([
             'movie' => function ($query) {
                 $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
@@ -21,8 +23,8 @@ class ShowTimeController extends Controller
                 $query->select('cinema_id', 'name')->where('is_deleted', false);
             }
         ])
-        ->where('is_deleted', false)
-        ->get();
+            ->where('is_deleted', false)
+            ->paginate($perPage);
 
         return response()->json([
             'code' => 200,
@@ -30,6 +32,7 @@ class ShowTimeController extends Controller
             'data' => $showtimes
         ]);
     }
+
 
     public function store(Request $request)
     {
@@ -101,6 +104,7 @@ class ShowTimeController extends Controller
         ]);
     }
 
+    // Lấy thông tin một suất chiếu cụ thể
     public function show($id)
     {
         try {
@@ -112,9 +116,9 @@ class ShowTimeController extends Controller
                     $query->select('cinema_id', 'name')->where('is_deleted', false);
                 }
             ])
-            ->where('showtime_id', $id)
-            ->where('is_deleted', false)
-            ->firstOrFail();
+                ->where('showtime_id', $id)
+                ->where('is_deleted', false)
+                ->firstOrFail();
 
             return response()->json([
                 'code' => 200,
@@ -129,40 +133,37 @@ class ShowTimeController extends Controller
         }
     }
 
-    public function showByMovieId($id)
-    {
-        try {
-            $showtimes = ShowTime::with([
-                'movie' => function ($query) {
-                    $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
-                },
-                'room.cinema' => function ($query) {
-                    $query->select('cinema_id', 'name')->where('is_deleted', false);
-                }
-            ])
-            ->where('movie_id', $id)
-            ->where('is_deleted', false)
-            ->get();
+    // Lấy danh sách suất chiếu theo movie
+    public function showByMovieId(Request $request, $id)
+{
+    $perPage = $request->input('per_page', 10);
 
-            if ($showtimes->isEmpty()) {
-                return response()->json([
-                    'code' => 404,
-                    'message' => 'Không tìm thấy suất chiếu'
-                ], 404);
+    $showtimes = ShowTime::with([
+            'movie' => function ($query) {
+                $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+            },
+            'room.cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
             }
+        ])
+        ->where('movie_id', $id)
+        ->where('is_deleted', false)
+        ->paginate($perPage);
 
-            return response()->json([
-                'code' => 200,
-                'message' => 'Lấy thông tin suất chiếu thành công',
-                'data' => $showtimes
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => 'Lỗi khi lấy suất chiếu'
-            ], 500);
-        }
+    if ($showtimes->isEmpty()) {
+        return response()->json([
+            'code' => 404,
+            'message' => 'Không tìm thấy suất chiếu'
+        ], 404);
     }
+
+    return response()->json([
+        'code' => 200,
+        'message' => 'Lấy thông tin suất chiếu thành công',
+        'data' => $showtimes
+    ]);
+}
+
 
     public function update(Request $request, $id)
     {

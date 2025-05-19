@@ -10,22 +10,21 @@ class UserAccount extends Model
     use HasFactory;
 
     protected $table = 'user_account';
-
     protected $primaryKey = 'user_id';
-
     public $incrementing = false; // Vì dùng UUID
-
     protected $keyType = 'string';
 
     protected $fillable = [
         'user_id',
         'username',
         'email',
-        'password',
+        'password', // Laravel mặc định dùng 'password' (dù DB bạn đặt là 'password_hash', nên cần xem lại)
         'full_name',
         'dob',
         'profile_picture_url',
         'phone',
+        'role',
+        'api_token',
         'is_deleted',
     ];
 
@@ -34,12 +33,10 @@ class UserAccount extends Model
         'api_token',
     ];
 
-    // Mối quan hệ với bảng role qua bảng trung gian user_role
-    // public function roles()
-    // {
-    //     return $this->belongsToMany(Role::class, 'user_role', 'user_id', 'role_id')
-    //                 ->withTimestamps();
-    // }
+    protected $casts = [
+        'is_deleted' => 'boolean',
+        'dob' => 'datetime',
+    ];
 
     // Một người dùng có thể có nhiều lượt đặt vé
     public function bookings()
@@ -53,9 +50,9 @@ class UserAccount extends Model
         return $this->hasMany(Review::class, 'user_id', 'user_id');
     }
 
-    // Một người dùng có thể có nhiều giao dịch
+    // Một người dùng có thể có nhiều lịch sử giao dịch
     // public function transactionLogs()
-    // // {
-    // //     return $this->hasMany(TransactionLog::class, 'user_id', 'user_id');
-    // // }
+    // {
+    //     return $this->hasMany(TransactionLog::class, 'user_id', 'user_id');
+    // }
 }

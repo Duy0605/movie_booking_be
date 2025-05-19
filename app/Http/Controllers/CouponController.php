@@ -9,11 +9,19 @@ use Illuminate\Support\Str;
 class CouponController extends Controller
 {
     // Lấy danh sách coupon
-    public function index()
+    public function index(Request $request)
     {
-        $coupons = Coupon::all();
-        return response()->json(['code' => 200, 'message' => 'Success', 'data' => $coupons]);
+        $perPage = $request->input('per_page', 10); // Số lượng mỗi trang, mặc định là 10
+
+        $coupons = Coupon::paginate($perPage);
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Lấy danh sách coupon thành công',
+            'data' => $coupons
+        ]);
     }
+
 
     // Tạo coupon mới
     public function store(Request $request)

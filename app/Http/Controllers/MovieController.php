@@ -10,9 +10,10 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 class MovieController extends Controller
 {
     // Lấy danh sách phim chưa bị xóa
-    public function index()
+    public function index(Request $request)
     {
-        $movies = Movie::where('is_deleted', false)->get();
+        $perPage = $request->input('per_page', 10);
+        $movies = Movie::where('is_deleted', false)->paginate($perPage);
 
         return response()->json([
             'code' => 200,
@@ -20,6 +21,7 @@ class MovieController extends Controller
             'data' => $movies
         ]);
     }
+
 
     // Tạo mới phim
     public function store(Request $request)
@@ -187,21 +189,24 @@ class MovieController extends Controller
         }
     }
     // Lấy danh sách phim đã bị xóa mềm
-    public function getDeletedMovies()
+    public function getDeletedMovies(Request $request)
     {
-        $deletedMovies = Movie::where('is_deleted', true)->get();
+        $perPage = $request->input('per_page', 10);
+        $deletedMovies = Movie::where('is_deleted', true)->paginate($perPage);
 
         return response()->json([
             'code' => 200,
-            'message' => 'Lấy danh sách phim đã xóa thành công',
+            'message' => 'Lấy danh sách phim đã xoá thành công',
             'data' => $deletedMovies
         ]);
     }
+
 
     // Lọc phim theo tên
     public function searchByTitle(Request $request)
     {
         $keyword = $request->query('title');
+        $perPage = $request->input('per_page', 10);
 
         if (!$keyword) {
             return response()->json([
@@ -212,7 +217,7 @@ class MovieController extends Controller
 
         $movies = Movie::where('is_deleted', false)
             ->where('title', 'like', '%' . $keyword . '%')
-            ->get();
+            ->paginate($perPage);
 
         return response()->json([
             'code' => 200,
@@ -221,11 +226,14 @@ class MovieController extends Controller
         ]);
     }
 
-    public function getNowShowing()
+    // Lấy danh sách phim đang chiếu
+    public function getNowShowing(Request $request)
     {
+        $perPage = $request->input('per_page', 10);
+
         $movies = Movie::where('is_deleted', false)
             ->where('release_date', '<=', now())
-            ->get();
+            ->paginate($perPage);
 
         return response()->json([
             'code' => 200,
@@ -233,11 +241,16 @@ class MovieController extends Controller
             'data' => $movies
         ]);
     }
-    public function getUpcomingMovie()
+
+
+    // Lấy danh sách phim sắp chiếu
+    public function getUpcomingMovie(Request $request)
     {
+        $perPage = $request->input('per_page', 10);
+
         $movies = Movie::where('is_deleted', false)
             ->where('release_date', '>', now())
-            ->get();
+            ->paginate($perPage);
 
         return response()->json([
             'code' => 200,
@@ -245,4 +258,5 @@ class MovieController extends Controller
             'data' => $movies
         ]);
     }
+
 }

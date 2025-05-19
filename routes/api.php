@@ -44,6 +44,9 @@ Route::prefix('reviews')->group(function () {
     Route::get('/{id}', [ReviewController::class, 'show']);
     Route::put('/{id}', [ReviewController::class, 'update']);
     Route::delete('/{id}', [ReviewController::class, 'destroy']);
+    Route::get('/reviews/movie/{movieId}', [ReviewController::class, 'getReviewsByMovie']);
+    Route::get('/reviews/user/{userId}', [ReviewController::class, 'getReviewsByUser']);
+
 });
 
 Route::prefix('bookings')->group(function () {
@@ -81,7 +84,7 @@ Route::prefix('showtimes')->group(function () {
     Route::delete('/soft/{id}', [ShowTimeController::class, 'destroy']);
     Route::get('/movieId/{id}', [ShowTimeController::class, 'showByMovieId']);
 
-  
+
 });
 
 
@@ -95,7 +98,7 @@ Route::prefix('payment')->group(function () {
     Route::delete('/{id}', [PaymentController::class, 'destroy']);
     Route::patch('/payments/{id}/complete', [PaymentController::class, 'markCompleted']);
     Route::post('/proxy-payos', [PaymentController::class, 'proxyPayOS']);
-    
+
 });
 Route::prefix('booking-seats')->group(function () {
     Route::get('/showtimes/{showtimeId}/seats', [BookingSeatController::class, 'getSeatsByShowtime']);
@@ -136,5 +139,5 @@ Route::prefix('users')->group(function () {
 });
 
 Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class,'login']);
+Route::post('/auth/login', [AuthController::class, 'login']);
 

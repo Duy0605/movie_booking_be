@@ -13,11 +13,12 @@ use App\Models\ShowTime;
 class BookingSeatController extends Controller
 {
     // Lấy danh sách booking seats chưa bị xóa
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = $request->input('per_page', 10); // số lượng mỗi trang
         $bookingSeats = BookingSeat::with(['booking', 'seat'])
             ->where('is_deleted', false)
-            ->get();
+            ->paginate($perPage);
 
         return response()->json([
             'code' => 200,
@@ -25,6 +26,7 @@ class BookingSeatController extends Controller
             'data' => $bookingSeats
         ]);
     }
+
 
     // Tạo mới booking seat
     public function store(Request $request)
@@ -219,34 +221,37 @@ class BookingSeatController extends Controller
             ]);
         }
     }
+
+    // Lấy danh sách ghế theo suất chiếu
     public function getSeatsByShowtime($showtimeId)
     {
-        // Lấy suất chiếu
+
         $showtime = ShowTime::where('showtime_id', $showtimeId)->where('is_deleted', false)->first();
         if (!$showtime) {
             return response()->json(['code' => 404, 'message' => 'Suất chiếu không tồn tại']);
         }
 
-        // Lấy tất cả ghế của phòng chiếu
+        $perPage = request()->input('per_page', 20);
+
         $seats = Seat::where('room_id', $showtime->room_id)
             ->where('is_deleted', false)
-            ->get();
+            ->paginate($perPage);
 
-        // Lấy danh sách seat_id đã được đặt cho suất chiếu này
+
+            
         $bookedSeatIds = BookingSeat::whereHas('booking', function ($query) use ($showtimeId) {
             $query->where('showtime_id', $showtimeId)
                 ->whereIn('status', ['PENDING', 'CONFIRMED'])
                 ->where('is_deleted', false);
-        })
-            ->where('is_deleted', false)
+        })->where('is_deleted', false)
             ->pluck('seat_id')
             ->toArray();
-        // dd($bookedSeatIds);
-        // Gắn trạng thái đã đặt hay chưa cho mỗi ghế
-        $seats = $seats->map(function ($seat) use ($bookedSeatIds) {
+
+        $seatsCollection = $seats->getCollection()->map(function ($seat) use ($bookedSeatIds) {
             $seat->is_booked = in_array($seat->seat_id, $bookedSeatIds);
             return $seat;
         });
+        $seats->setCollection($seatsCollection);
 
         return response()->json([
             'code' => 200,
@@ -254,4 +259,5 @@ class BookingSeatController extends Controller
             'data' => $seats
         ]);
     }
+
 }

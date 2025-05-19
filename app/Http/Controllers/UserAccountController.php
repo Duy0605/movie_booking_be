@@ -10,14 +10,21 @@ use App\Response\ApiResponse;
 
 class UserAccountController extends Controller
 {
-    // Lấy danh sách người dùng
-    public function index()
+    // Lấy danh sách người dùng (chưa bị xoá)
+    public function index(Request $request)
     {
-        $users = UserAccount::where('is_deleted', false)->get();
+        $perPage = $request->input('per_page', 10); // số bản ghi mỗi trang
+        $page = $request->input('page', 1);         // trang hiện tại
+
+        $users = UserAccount::where('is_deleted', false)
+        ->where('role', 'use') // chỉ lấy người dùng
+            ->paginate($perPage, ['*'], 'page', $page);
+
         return ApiResponse::success($users, 'Danh sách người dùng');
     }
 
-    // Lấy thông tin 1 người dùng theo ID
+
+    // Lấy thông tin một người dùng theo ID
     public function show($id)
     {
         $user = UserAccount::where('user_id', $id)
@@ -38,20 +45,24 @@ class UserAccountController extends Controller
             'username' => 'required|string|max:50|unique:user_account,username',
             'email' => 'required|email|unique:user_account,email',
             'password' => 'required|string|min:6',
-            'full_name' => 'required|string|max:100', 
-            'dob' => 'nullable|date', 
+            'full_name' => 'nullable|string|max:100',
+            'dob' => 'nullable|date',
             'phone' => 'required|string|max:15|unique:user_account,phone',
+            'profile_picture_url' => 'url',
+            'role' => 'string|max:20', // nếu có sử dụng phân quyền
         ]);
 
         $user = UserAccount::create([
-            'user_id' => Str::uuid(),
+            'user_id' => (string) Str::uuid(),
             'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'full_name' => $request->full_name,
             'dob' => $request->dob,
             'phone' => $request->phone,
-            'profile_picture_url' => $request->profile_picture_url ?? null,
+            'profile_picture_url' => $request->profile_picture_url,
+            'role' => $request->role ?? 'user',
+            'is_deleted' => false,
         ]);
 
         return ApiResponse::success($user, 'Tạo người dùng thành công', 201);
@@ -72,20 +83,23 @@ class UserAccountController extends Controller
         $request->validate([
             'email' => 'nullable|email|unique:user_account,email,' . $user->user_id . ',user_id',
             'phone' => 'nullable|string|max:15|unique:user_account,phone,' . $user->user_id . ',user_id',
+            'full_name' => 'nullable|string|max:100',
+            'dob' => 'nullable|date',
+            'profile_picture_url' => 'url',
         ]);
 
-        $user->update([
-            'email' => $request->email ?? $user->email,
-            'full_name' => $request->full_name ?? $user->full_name,
-            'dob' => $request->dob ?? $user->dob,
-            'phone' => $request->phone ?? $user->phone,
-            'profile_picture_url' => $request->profile_picture_url ?? $user->profile_picture_url,
-        ]);
+        $user->update($request->only([
+            'email',
+            'full_name',
+            'dob',
+            'phone',
+            'profile_picture_url',
+        ]));
 
         return ApiResponse::success($user, 'Cập nhật người dùng thành công');
     }
 
-    // Xóa mềm người dùng
+    // Xoá mềm người dùng
     public function destroy($id)
     {
         $user = UserAccount::where('user_id', $id)

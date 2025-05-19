@@ -12,11 +12,20 @@ use Illuminate\Support\Facades\DB;
 class BookingController extends Controller
 {
     // Lấy danh sách booking
-    public function index()
+    public function index(Request $request)
     {
-        $bookings = Booking::with(['user', 'showtime.movie', 'bookingSeats'])->get();
-        return response()->json(['code' => 200, 'message' => 'Success', 'data' => $bookings]);
+        $perPage = $request->input('per_page', 10); // Số bản ghi/trang, mặc định 10
+        $bookings = Booking::with(['user', 'showtime.movie', 'bookingSeats'])
+            ->where('is_deleted', false)
+            ->paginate($perPage);
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Lấy danh sách booking thành công',
+            'data' => $bookings
+        ]);
     }
+
 
     // Tạo booking mới
     public function store(Request $request)
