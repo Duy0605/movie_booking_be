@@ -11,10 +11,15 @@ use Illuminate\Validation\Rule;
 
 class RoomController extends Controller
 {
-    // Lấy danh sách tất cả phòng chưa bị xóa
+    // Lấy danh sách tất cả phòng chưa bị xóa, kèm thông tin cinema
     public function index()
     {
-        $rooms = Room::where('is_deleted', false)->get();
+        $rooms = Room::with(['cinema' => function ($query) {
+            $query->select('cinema_id', 'name')->where('is_deleted', false);
+        }])
+        ->where('is_deleted', false)
+        ->get();
+
         return ApiResponse::success($rooms, 'Danh sách phòng');
     }
 
@@ -22,7 +27,7 @@ class RoomController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'cinema_id' => 'required|string',
+            'cinema_id' => 'required|string|exists:cinema,cinema_id',
             'room_name' => [
                 'required',
                 'string',
@@ -31,16 +36,18 @@ class RoomController extends Controller
                     return $query->where('is_deleted', false);
                 }),
             ],
-            'capacity' => 'required|integer',
+            'capacity' => 'required|integer|min:1',
         ], [
             'cinema_id.required' => 'Vui lòng nhập cinema_id.',
             'cinema_id.string' => 'cinema_id phải là chuỗi.',
+            'cinema_id.exists' => 'Rạp không tồn tại.',
             'room_name.required' => 'Vui lòng nhập tên phòng.',
             'room_name.string' => 'Tên phòng phải là chuỗi.',
             'room_name.max' => 'Tên phòng không được vượt quá 100 ký tự.',
             'room_name.unique' => 'Tên phòng đã tồn tại.',
             'capacity.required' => 'Vui lòng nhập sức chứa phòng.',
             'capacity.integer' => 'Sức chứa phòng phải là số nguyên.',
+            'capacity.min' => 'Sức chứa phòng phải lớn hơn 0.',
         ]);
 
         $room = Room::create([
@@ -50,13 +57,23 @@ class RoomController extends Controller
             'capacity' => $request->capacity,
         ]);
 
+        // Eager load cinema relationship for the response
+        $room->load(['cinema' => function ($query) {
+            $query->select('cinema_id', 'name')->where('is_deleted', false);
+        }]);
+
         return ApiResponse::success($room, 'Tạo phòng thành công', 201);
     }
 
     // Lấy thông tin một phòng cụ thể
     public function show($id)
     {
-        $room = Room::where('room_id', $id)->where('is_deleted', false)->first();
+        $room = Room::with(['cinema' => function ($query) {
+            $query->select('cinema_id', 'name')->where('is_deleted', false);
+        }])
+        ->where('room_id', $id)
+        ->where('is_deleted', false)
+        ->first();
 
         if (!$room) {
             return ApiResponse::error('Room not found', 404);
@@ -76,24 +93,36 @@ class RoomController extends Controller
             return ApiResponse::error('Room not found', 404);
         }
 
-        // Validate dữ liệu cập nhật
         $request->validate([
-            'cinema_id' => 'required|string',
-            'room_name' => 'required|string|max:100|unique:room,room_name,' . $room->room_id . ',room_id',
-            'capacity' => 'required|integer',
+            'cinema_id' => 'required|string|exists:cinema,cinema_id',
+            'room_name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('room', 'room_name')
+                    ->ignore($room->room_id, 'room_id')
+                    ->where('is_deleted', false),
+            ],
+            'capacity' => 'required|integer|min:1',
         ], [
             'cinema_id.required' => 'Vui lòng nhập cinema_id.',
             'cinema_id.string' => 'cinema_id phải là chuỗi.',
+            'cinema_id.exists' => 'Rạp không tồn tại.',
             'room_name.required' => 'Vui lòng nhập tên phòng.',
             'room_name.string' => 'Tên phòng phải là chuỗi.',
             'room_name.max' => 'Tên phòng không được vượt quá 100 ký tự.',
             'room_name.unique' => 'Tên phòng đã tồn tại.',
             'capacity.required' => 'Vui lòng nhập sức chứa phòng.',
             'capacity.integer' => 'Sức chứa phòng phải là số nguyên.',
+            'capacity.min' => 'Sức chứa phòng phải lớn hơn 0.',
         ]);
 
-        // Cập nhật dữ liệu
-        $room->update($request->only(['room_name', 'capacity', 'cinema_id']));
+        $room->update($request->only(['cinema_id', 'room_name', 'capacity']));
+
+        // Eager load cinema relationship for the response
+        $room->load(['cinema' => function ($query) {
+            $query->select('cinema_id', 'name')->where('is_deleted', false);
+        }]);
 
         return ApiResponse::success($room, 'Room updated successfully');
     }
@@ -107,14 +136,20 @@ class RoomController extends Controller
         }
 
         $request->validate([
-            'capacity' => 'required|integer',
+            'capacity' => 'required|integer|min:1',
         ], [
             'capacity.required' => 'Vui lòng nhập sức chứa phòng.',
             'capacity.integer' => 'Sức chứa phòng phải là số nguyên.',
+            'capacity.min' => 'Sức chứa phòng phải lớn hơn 0.',
         ]);
 
         $room->capacity = $request->capacity;
         $room->save();
+
+        // Eager load cinema relationship for the response
+        $room->load(['cinema' => function ($query) {
+            $query->select('cinema_id', 'name')->where('is_deleted', false);
+        }]);
 
         return ApiResponse::success($room, 'Room capacity updated successfully');
     }
@@ -143,6 +178,11 @@ class RoomController extends Controller
 
         $room->is_deleted = false;
         $room->save();
+
+        // Eager load cinema relationship for the response
+        $room->load(['cinema' => function ($query) {
+            $query->select('cinema_id', 'name')->where('is_deleted', false);
+        }]);
 
         return ApiResponse::success($room, 'Room restored');
     }

@@ -13,7 +13,16 @@ class ShowTimeController extends Controller
 {
     public function index()
     {
-        $showtimes = ShowTime::where('is_deleted', false)->get();
+        $showtimes = ShowTime::with([
+            'movie' => function ($query) {
+                $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+            },
+            'room.cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ])
+        ->where('is_deleted', false)
+        ->get();
 
         return response()->json([
             'code' => 200,
@@ -27,12 +36,15 @@ class ShowTimeController extends Controller
         $request->validate([
             'movie_id' => 'required|string|exists:movie,movie_id',
             'start_time' => 'required|date',
-            'room_id' => 'required|string|max:255',
+            'room_id' => 'required|string|exists:room,room_id',
             'price' => 'required|numeric|min:0',
         ]);
 
         // Lấy phim để biết duration
-        $movie = Movie::where('movie_id', $request->movie_id)->first();
+        $movie = Movie::where('movie_id', $request->movie_id)
+            ->where('is_deleted', false)
+            ->select('movie_id', 'title', 'duration')
+            ->first();
         if (!$movie) {
             return response()->json([
                 'code' => 404,
@@ -52,7 +64,7 @@ class ShowTimeController extends Controller
                 $existingStart = Carbon::parse($showtime->start_time);
                 $existingEnd = (clone $existingStart)->addMinutes($movieDuration);
 
-                return $startTime < $existingEnd && $endTime > $existingStart; // kiểm tra overlap
+                return $startTime < $existingEnd && $endTime > $existingStart;
             })
             ->isNotEmpty();
 
@@ -72,18 +84,37 @@ class ShowTimeController extends Controller
             'is_deleted' => false,
         ]);
 
+        // Eager load relationships for response
+        $showtime->load([
+            'movie' => function ($query) {
+                $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+            },
+            'room.cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ]);
+
         return response()->json([
             'code' => 201,
             'message' => 'Tạo suất chiếu thành công',
             'data' => $showtime
         ]);
     }
+
     public function show($id)
     {
         try {
-            $showtime = ShowTime::where('showtime_id', $id)
-                ->where('is_deleted', false)
-                ->firstOrFail();
+            $showtime = ShowTime::with([
+                'movie' => function ($query) {
+                    $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+                },
+                'room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ])
+            ->where('showtime_id', $id)
+            ->where('is_deleted', false)
+            ->firstOrFail();
 
             return response()->json([
                 'code' => 200,
@@ -94,27 +125,42 @@ class ShowTimeController extends Controller
             return response()->json([
                 'code' => 404,
                 'message' => 'Suất chiếu không tồn tại'
-            ]);
+            ], 404);
         }
     }
+
     public function showByMovieId($id)
     {
         try {
-            $showtime = ShowTime::where('movie_id', $id)
-                ->where('is_deleted', false)
-                ->with(['movie', 'room.cinema'])
-                ->get();
+            $showtimes = ShowTime::with([
+                'movie' => function ($query) {
+                    $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+                },
+                'room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ])
+            ->where('movie_id', $id)
+            ->where('is_deleted', false)
+            ->get();
+
+            if ($showtimes->isEmpty()) {
+                return response()->json([
+                    'code' => 404,
+                    'message' => 'Không tìm thấy suất chiếu'
+                ], 404);
+            }
 
             return response()->json([
                 'code' => 200,
                 'message' => 'Lấy thông tin suất chiếu thành công',
-                'data' => $showtime
+                'data' => $showtimes
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (Exception $e) {
             return response()->json([
-                'code' => 404,
-                'message' => 'Không tìm thấy suất chiếu'
-            ]);
+                'code' => 500,
+                'message' => 'Lỗi khi lấy suất chiếu'
+            ], 500);
         }
     }
 
@@ -126,14 +172,61 @@ class ShowTimeController extends Controller
                 ->firstOrFail();
 
             $request->validate([
-                'movie_id' => 'sometimes|required|string|exists:movie,movie_id',
-                'start_time' => 'sometimes|required|date',
-                'room_id' => 'sometimes|required|string|max:255',
-                'price' => 'sometimes|required|numeric|min:0',
+                'movie_id' => 'sometimes|string|exists:movie,movie_id',
+                'start_time' => 'sometimes|date',
+                'room_id' => 'sometimes|string|exists:room,room_id',
+                'price' => 'sometimes|numeric|min:0',
             ]);
+
+            // Kiểm tra trùng suất chiếu nếu cập nhật start_time hoặc room_id
+            if ($request->has('start_time') || $request->has('room_id')) {
+                $movie = Movie::where('movie_id', $request->movie_id ?? $showtime->movie_id)
+                    ->where('is_deleted', false)
+                    ->select('movie_id', 'title', 'duration')
+                    ->first();
+                if (!$movie) {
+                    return response()->json([
+                        'code' => 404,
+                        'message' => 'Phim không tồn tại'
+                    ], 404);
+                }
+
+                $startTime = Carbon::parse($request->start_time ?? $showtime->start_time);
+                $endTime = (clone $startTime)->addMinutes($movie->duration);
+
+                $conflict = ShowTime::where('room_id', $request->room_id ?? $showtime->room_id)
+                    ->where('showtime_id', '!=', $id)
+                    ->where('is_deleted', false)
+                    ->get()
+                    ->filter(function ($existingShowtime) use ($startTime, $endTime) {
+                        $movieDuration = $existingShowtime->movie->duration ?? 0;
+                        $existingStart = Carbon::parse($existingShowtime->start_time);
+                        $existingEnd = (clone $existingStart)->addMinutes($movieDuration);
+
+                        return $startTime < $existingEnd && $endTime > $existingStart;
+                    })
+                    ->isNotEmpty();
+
+                if ($conflict) {
+                    return response()->json([
+                        'code' => 400,
+                        'message' => 'Phòng đã có suất chiếu trong khung giờ này.'
+                    ], 400);
+                }
+            }
 
             $showtime->fill($request->all());
             $showtime->save();
+
+            // Eager load relationships for response
+            $showtime->load([
+                'movie' => function ($query) {
+                    $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+                },
+                'room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ]);
 
             return response()->json([
                 'code' => 200,
@@ -144,7 +237,7 @@ class ShowTimeController extends Controller
             return response()->json([
                 'code' => 404,
                 'message' => 'Suất chiếu không tồn tại'
-            ]);
+            ], 404);
         }
     }
 
@@ -166,7 +259,7 @@ class ShowTimeController extends Controller
             return response()->json([
                 'code' => 404,
                 'message' => 'Suất chiếu không tồn tại'
-            ]);
+            ], 404);
         }
     }
 }
