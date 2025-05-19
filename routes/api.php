@@ -9,6 +9,7 @@ use App\Http\Controllers\MovieController;
 use App\Http\Controllers\ShowTimeController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BookingSeatController;
+use App\Http\Controllers\CinemaController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('rooms')->group(function () {
@@ -114,4 +115,12 @@ Route::prefix('coupons')->group(function () {
     Route::put('/{id}', [CouponController::class, 'update']);
     Route::delete('/soft/{id}', [CouponController::class, 'softDelete']); // nếu dùng soft delete
     Route::delete('/{id}', [CouponController::class, 'forceDelete']); // xóa cứng
+});
+
+Route::prefix('cinemas')->group(function () {
+    Route::get('/', [CinemaController::class, 'index']);           // Lấy danh sách tất cả rạp chiếu
+    Route::post('/', [CinemaController::class, 'store']);          // Thêm rạp mới
+    Route::get('/{id}', [CinemaController::class, 'show']);        // Lấy thông tin 1 rạp theo ID
+    Route::put('/{id}', [CinemaController::class, 'update']);      // Cập nhật rạp
+    Route::delete('/{id}', [CinemaController::class, 'destroy']);  // Xoá mềm rạp
 });
