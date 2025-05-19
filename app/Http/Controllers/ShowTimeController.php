@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\ShowTime;
@@ -100,7 +102,8 @@ class ShowTimeController extends Controller
         try {
             $showtime = ShowTime::where('movie_id', $id)
                 ->where('is_deleted', false)
-                ->firstOrFail();
+                ->with(['movie', 'room.cinema'])
+                ->get();
 
             return response()->json([
                 'code' => 200,

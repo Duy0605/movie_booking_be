@@ -15,4 +15,11 @@ class Room extends Model
     protected $fillable = [
         'room_id', 'cinema_id', 'room_name', 'capacity', 'is_deleted'
     ];
+
+    // Define the relationship to the Cinema model
+    public function cinema()
+    {
+        return $this->belongsTo(Cinema::class, 'cinema_id', 'cinema_id')
+            ->where('is_deleted', false);
+    }
 }
