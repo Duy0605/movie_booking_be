@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Payment;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 
 class PaymentController extends Controller
 {
@@ -49,7 +50,6 @@ class PaymentController extends Controller
 
         return response()->json(['code' => 201, 'message' => 'Tạo payment thành công', 'data' => $payment]);
     }
-
 
     // Xem chi tiết payment theo id
     public function show($id)
@@ -99,7 +99,6 @@ class PaymentController extends Controller
         return response()->json(['code' => 200, 'message' => 'Xóa payment thành công']);
     }
 
-
     public function markCompleted($id)
     {
         $payment = Payment::find($id);
@@ -120,24 +119,68 @@ class PaymentController extends Controller
             ], 400);
         }
 
-        // // Lấy thông tin booking để kiểm tra số tiền cần thanh toán
-        // $booking = $payment->booking;
-        // if (!$booking) {
-        //     return response()->json(['code' => 400, 'message' => 'Booking không hợp lệ']);
-        // }
-
-        // // Giả sử booking có trường total_amount là số tiền cần thanh toán
-        // if ($payment->amount < $booking->total_price) {
-        //     return response()->json([
-        //         'code' => 400,
-        //         'message' => 'Số tiền thanh toán chưa đủ để chuyển trạng thái sang COMPLETED.'
-        //     ], 400);
-        // }
-
         // Nếu đủ tiền, cho chuyển sang COMPLETED
         $payment->payment_status = 'COMPLETED';
         $payment->save();
 
         return response()->json(['code' => 200, 'message' => 'Cập nhật trạng thái sang COMPLETED thành công', 'data' => $payment]);
+    }
+
+    public function proxyPayOS(Request $request)
+    {
+        $payosClientId = env('PAYOS_CLIENT_ID');
+        $payosApiKey = env('PAYOS_API_KEY');
+        $payosApiUrl = env('PAYOS_API_URL');
+        $checksumKey = env('PAYOS_CHECKSUM_KEY');
+
+        \Log::info('PayOS Proxy Request:', $request->all());
+
+        // Prepare data for signature
+        $data = $request->all();
+        $signatureFields = [
+            'amount' => $data['amount'],
+            'cancelUrl' => $data['cancelUrl'],
+            'description' => $data['description'],
+            'orderCode' => $data['orderCode'],
+            'returnUrl' => $data['returnUrl']
+        ];
+
+        // Sort fields alphabetically by key
+        ksort($signatureFields);
+
+        // Concatenate fields in the format key=value
+        $signatureString = '';
+        foreach ($signatureFields as $key => $value) {
+            $signatureString .= "$key=$value&";
+        }
+        $signatureString = rtrim($signatureString, '&'); // Remove trailing &
+
+        // Generate HMAC-SHA256 signature
+        $signature = hash_hmac('sha256', $signatureString, $checksumKey);
+
+        // Add signature to the request data
+        $data['signature'] = $signature;
+
+        \Log::info('PayOS Signed Request:', $data);
+
+        $response = Http::withHeaders([
+            'x-client-id' => $payosClientId,
+            'x-api-key' => $payosApiKey,
+            'Content-Type' => 'application/json',
+        ])->post($payosApiUrl, $data);
+
+        $responseData = $response->json();
+        \Log::info('PayOS Proxy Response:', $responseData);
+
+        // Log the checkoutUrl specifically
+        if (isset($responseData['data']['checkoutUrl'])) {
+            \Log::info('PayOS Checkout URL:', ['checkoutUrl' => $responseData['data']['checkoutUrl']]);
+        }
+
+        return response()->json($responseData)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            ->header('Access-Control-Allow-Credentials', 'true');
     }
 }

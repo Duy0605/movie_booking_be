@@ -33,7 +33,7 @@ return [
     | Dùng ['*'] để cho phép tất cả, hoặc chỉ định như: ['http://localhost:3000']
     |
     */
-    'allowed_origins' => ['http://localhost:3000'],
+    'allowed_origins' => ['*'],
 
     /*
     |--------------------------------------------------------------------------

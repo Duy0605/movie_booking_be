@@ -91,6 +91,8 @@ Route::prefix('payment')->group(function () {
     Route::put('/{id}', [PaymentController::class, 'update']);
     Route::delete('/{id}', [PaymentController::class, 'destroy']);
     Route::patch('/payments/{id}/complete', [PaymentController::class, 'markCompleted']);
+    Route::post('/proxy-payos', [PaymentController::class, 'proxyPayOS']);
+    
 });
 Route::prefix('booking-seats')->group(function () {
     Route::get('/showtimes/{showtimeId}/seats', [BookingSeatController::class, 'getSeatsByShowtime']);

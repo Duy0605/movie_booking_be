@@ -12,7 +12,7 @@ class Cors
         $response = $next($request);
 
         // Add CORS headers
-        $response->headers->set('Access-Control-Allow-Origin', 'http://localhost:5173');
+        $response->headers->set('Access-Control-Allow-Origin', 'http://localhost:5173, https://3450-2405-4802-1bec-5ac0-5ed3-c71e-3d21-4938.ngrok-free.app');
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
         $response->headers->set('Access-Control-Allow-Credentials', 'true');
