@@ -11,6 +11,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BookingSeatController;
 use App\Http\Controllers\CinemaController;
 use App\Http\Controllers\UserAccountController;
+use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('rooms')->group(function () {
@@ -133,3 +134,6 @@ Route::prefix('users')->group(function () {
     Route::put('{id}', [UserAccountController::class, 'update']);    // Cập nhật người dùng
     Route::delete('{id}', [UserAccountController::class, 'destroy']); // Xoá mềm người dùng
 });
+
+Route::post('/auth/register', [AuthController::class, 'register']);
+
