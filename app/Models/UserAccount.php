@@ -31,6 +31,7 @@ class UserAccount extends Model
 
     protected $hidden = [
         'password',
+        'api_token',
     ];
 
     // Mối quan hệ với bảng role qua bảng trung gian user_role

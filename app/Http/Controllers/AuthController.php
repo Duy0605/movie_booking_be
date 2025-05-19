@@ -35,4 +35,44 @@ class AuthController extends Controller
 
         return ApiResponse::success($user, 'Đăng ký tài khoản thành công', 201);
     }
+
+    // Đăng nhập
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string'
+        ]);
+
+        $user = UserAccount::where('email', $request->email)
+            ->where('is_deleted', false)
+            ->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email hoặc mật khẩu không đúng'
+            ], 401);
+        }
+
+        // Tạo api_token thủ công
+        $token = Str::random(60);
+        $user->api_token = hash('sha256', $token); // Băm để bảo mật hơn
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đăng nhập thành công',
+            'token' => $token, // Trả token gốc, không băm
+            'user' => [
+                'user_id' => $user->user_id,
+                'username' => $user->username,
+                'email' => $user->email,
+                'full_name' => $user->full_name,
+                'dob' => $user->dob,
+                'phone' => $user->phone,
+                'profile_picture_url' => $user->profile_picture_url
+            ]
+        ]);
+    }
 }

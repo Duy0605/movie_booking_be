@@ -136,4 +136,5 @@ Route::prefix('users')->group(function () {
 });
 
 Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class,'login']);
 
