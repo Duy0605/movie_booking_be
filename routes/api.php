@@ -10,6 +10,7 @@ use App\Http\Controllers\ShowTimeController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BookingSeatController;
 use App\Http\Controllers\CinemaController;
+use App\Http\Controllers\UserAccountController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('rooms')->group(function () {
@@ -123,4 +124,12 @@ Route::prefix('cinemas')->group(function () {
     Route::get('/{id}', [CinemaController::class, 'show']);        // Lấy thông tin 1 rạp theo ID
     Route::put('/{id}', [CinemaController::class, 'update']);      // Cập nhật rạp
     Route::delete('/{id}', [CinemaController::class, 'destroy']);  // Xoá mềm rạp
+});
+
+Route::prefix('users')->group(function () {
+    Route::get('/', [UserAccountController::class, 'index']);        // Danh sách người dùng
+    Route::post('/', [UserAccountController::class, 'store']);       // Tạo người dùng mới
+    Route::get('{id}', [UserAccountController::class, 'show']);      // Lấy chi tiết người dùng
+    Route::put('{id}', [UserAccountController::class, 'update']);    // Cập nhật người dùng
+    Route::delete('{id}', [UserAccountController::class, 'destroy']); // Xoá mềm người dùng
 });
