@@ -135,10 +135,10 @@ class ShowTimeController extends Controller
 
     // Lấy danh sách suất chiếu theo movie
     public function showByMovieId(Request $request, $id)
-{
-    $perPage = $request->input('per_page', 10);
+    {
+        $perPage = $request->input('per_page', 10);
 
-    $showtimes = ShowTime::with([
+        $showtimes = ShowTime::with([
             'movie' => function ($query) {
                 $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
             },
@@ -146,23 +146,23 @@ class ShowTimeController extends Controller
                 $query->select('cinema_id', 'name')->where('is_deleted', false);
             }
         ])
-        ->where('movie_id', $id)
-        ->where('is_deleted', false)
-        ->paginate($perPage);
+            ->where('movie_id', $id)
+            ->where('is_deleted', false)
+            ->paginate($perPage);
 
-    if ($showtimes->isEmpty()) {
+        if ($showtimes->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Không tìm thấy suất chiếu'
+            ], 404);
+        }
+
         return response()->json([
-            'code' => 404,
-            'message' => 'Không tìm thấy suất chiếu'
-        ], 404);
+            'code' => 200,
+            'message' => 'Lấy thông tin suất chiếu thành công',
+            'data' => $showtimes
+        ]);
     }
-
-    return response()->json([
-        'code' => 200,
-        'message' => 'Lấy thông tin suất chiếu thành công',
-        'data' => $showtimes
-    ]);
-}
 
 
     public function update(Request $request, $id)
