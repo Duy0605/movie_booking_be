@@ -178,20 +178,20 @@ class ReviewController extends Controller
         return ApiResponse::success($review, 'Cập nhật đánh giá thành công');
     }
 
-    // Xóa mềm đánh giá
+    // Xóa đánh giá
     public function destroy($id)
     {
         $review = Review::find($id);
 
-        if (!$review || $review->is_deleted) {
+        if (!$review) {
             return ApiResponse::error('Không tìm thấy đánh giá', 404);
         }
 
-        $review->is_deleted = true;
-        $review->save();
+        $review->delete();
 
-        return ApiResponse::success(null, 'Đánh giá đã được xóa');
+        return ApiResponse::success(null, 'Đánh giá đã được xóa vĩnh viễn');
     }
+
 
     // Tính trung bình rating cho một bộ phim
     public function averageRatingByMovie($movieId)

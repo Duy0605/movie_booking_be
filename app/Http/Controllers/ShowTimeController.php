@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ShowTimeController extends Controller
 {
+    // Lấy danh sách suất chiếu chưa bị xóa 
     public function index(Request $request)
     {
         $perPage = $request->input('per_page', 10); // Số bản ghi/trang, mặc định 10
@@ -34,6 +35,7 @@ class ShowTimeController extends Controller
     }
 
 
+    // Tạo mới suất chiếu
     public function store(Request $request)
     {
         $request->validate([
@@ -87,7 +89,7 @@ class ShowTimeController extends Controller
             'is_deleted' => false,
         ]);
 
-        // Eager load relationships for response
+
         $showtime->load([
             'movie' => function ($query) {
                 $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
@@ -165,6 +167,7 @@ class ShowTimeController extends Controller
     }
 
 
+    // Cập nhật thông tin suất chiếu
     public function update(Request $request, $id)
     {
         try {
@@ -242,6 +245,7 @@ class ShowTimeController extends Controller
         }
     }
 
+    // Xóa suất chiếu (soft delete)
     public function destroy($id)
     {
         try {
@@ -263,4 +267,39 @@ class ShowTimeController extends Controller
             ], 404);
         }
     }
+
+    // Khôi phục suất chiếu đã bị xóa mềm
+    public function restore($id)
+    {
+        try {
+            $showtime = ShowTime::where('showtime_id', $id)
+                ->where('is_deleted', true)
+                ->firstOrFail();
+
+            $showtime->is_deleted = false;
+            $showtime->save();
+
+            // Load lại quan hệ để trả về thông tin đầy đủ
+            $showtime->load([
+                'movie' => function ($query) {
+                    $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+                },
+                'room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ]);
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Khôi phục suất chiếu thành công',
+                'data' => $showtime
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Suất chiếu không tồn tại hoặc chưa bị xóa'
+            ], 404);
+        }
+    }
+
 }

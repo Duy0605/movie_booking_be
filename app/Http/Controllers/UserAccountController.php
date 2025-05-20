@@ -17,7 +17,7 @@ class UserAccountController extends Controller
         $page = $request->input('page', 1);         // trang hiện tại
 
         $users = UserAccount::where('is_deleted', false)
-        ->where('role', 'use') // chỉ lấy người dùng
+            ->where('role', 'use') // chỉ lấy người dùng
             ->paginate($perPage, ['*'], 'page', $page);
 
         return ApiResponse::success($users, 'Danh sách người dùng');
@@ -114,4 +114,35 @@ class UserAccountController extends Controller
 
         return ApiResponse::success(null, 'Xoá người dùng thành công');
     }
+
+    // Khôi phục người dùng đã bị xóa mềm
+    public function restore($id)
+    {
+        $user = UserAccount::where('user_id', $id)
+            ->where('is_deleted', true)
+            ->first();
+
+        if (!$user) {
+            return ApiResponse::error('Không tìm thấy người dùng đã bị xóa hoặc chưa bị xóa', 404);
+        }
+
+        $user->update(['is_deleted' => false]);
+
+        return ApiResponse::success($user, 'Khôi phục người dùng thành công');
+    }
+
+    // Xóa vĩnh viễn người dùng
+    public function forceDelete($id)
+    {
+        $user = UserAccount::where('user_id', $id)->first();
+
+        if (!$user) {
+            return ApiResponse::error('Không tìm thấy người dùng để xóa vĩnh viễn', 404);
+        }
+
+        $user->delete(); // xóa hẳn khỏi DB
+
+        return ApiResponse::success(null, 'Xóa người dùng vĩnh viễn thành công');
+    }
+
 }

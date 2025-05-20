@@ -101,6 +101,7 @@ class PaymentController extends Controller
         return response()->json(['code' => 200, 'message' => 'Xóa payment thành công']);
     }
 
+    // Cập nhật trạng thái payment sang COMPLETED
     public function markCompleted($id)
     {
         $payment = Payment::find($id);
@@ -169,6 +170,7 @@ class PaymentController extends Controller
         return response()->json(['code' => 200, 'message' => 'Cập nhật trạng thái sang COMPLETED thành công', 'data' => $payment]);
     }
 
+    // Proxy PayOS API
     public function proxyPayOS(Request $request)
     {
         $payosClientId = env('PAYOS_CLIENT_ID');

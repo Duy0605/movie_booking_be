@@ -12,8 +12,10 @@ use App\Http\Controllers\BookingSeatController;
 use App\Http\Controllers\CinemaController;
 use App\Http\Controllers\UserAccountController;
 use App\Http\Controllers\AuthController;
-use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\SettingController;
+use Illuminate\Support\Facades\Route;
+
 
 Route::prefix('rooms')->group(function () {
     Route::get('/', [RoomController::class, 'index']);             // GET /api/rooms
@@ -32,7 +34,7 @@ Route::prefix('seats')->group(function () {
     Route::get('/{id}', [SeatController::class, 'show']);
     Route::put('/{id}', [SeatController::class, 'update']);
     Route::delete('/soft/{id}', [SeatController::class, 'softDelete']);
-    Route::put('/restore/{id}', [SeatController::class, 'restore']);
+    Route::patch('/restore/{id}', [SeatController::class, 'restore']);
     Route::delete('/{id}', [SeatController::class, 'destroy']);
     Route::post('/batch', [SeatController::class, 'storeMultiple']);
 });
@@ -58,19 +60,17 @@ Route::prefix('bookings')->group(function () {
     Route::delete('/soft/{id}', [BookingController::class, 'destroy']); // Xóa mềm booking
     Route::patch('/restore/{id}', [BookingController::class, 'restore']); // Khôi phục booking
     Route::delete('/{id}', [BookingController::class, 'forceDelete']); // Xóa vĩnh viễn booking
-
     Route::put('/bookings/{id}/total-price', [BookingController::class, 'updateTotalPrice']);
 });
 
 Route::prefix('movies')->group(function () {
-    Route::get('/', [MovieController::class, 'index']);               // GET /api/movies
-    Route::post('/', [MovieController::class, 'store']);              // POST /api/movies
-    Route::get('/{id}', [MovieController::class, 'show']);            // GET /api/movies/{id}
-    Route::put('/{id}', [MovieController::class, 'update']);          // PUT /api/movies/{id}
+    Route::get('/', [MovieController::class, 'index']);
+    Route::post('/', [MovieController::class, 'store']);
+    Route::get('/{id}', [MovieController::class, 'show']);
+    Route::put('/{id}', [MovieController::class, 'update']);
     Route::delete('/soft/{id}', [MovieController::class, 'destroy']);  // DELETE mềm
     Route::patch('/restore/{id}', [MovieController::class, 'restore']);   // PATCH khôi phục
     Route::get('/movies/deleted', [MovieController::class, 'getDeletedMovies']);
-    Route::get('/movies/search', [MovieController::class, 'searchByTitle']);
     Route::get('/movies/search', [MovieController::class, 'searchByTitle']);
     Route::get('/movies/now-showing', [MovieController::class, 'getNowShowing']);
     Route::get('/movies/upcoming-movie', [MovieController::class, 'getUpcomingMovie']);
@@ -83,6 +83,7 @@ Route::prefix('showtimes')->group(function () {
     Route::get('/{id}', [ShowTimeController::class, 'show']);
     Route::put('/{id}', [ShowTimeController::class, 'update']);
     Route::delete('/soft/{id}', [ShowTimeController::class, 'destroy']);
+    Route::patch('/restore/{id}', [ShowTimeController::class, 'restore']);
     Route::get('/movieId/{id}', [ShowTimeController::class, 'showByMovieId']);
 
 
@@ -110,7 +111,7 @@ Route::prefix('booking-seats')->group(function () {
     Route::delete('/soft/{id}', [BookingSeatController::class, 'destroy']);
     Route::delete('/{id}', [BookingSeatController::class, 'forceDelete']);
     Route::delete('/{id}/seats', [BookingSeatController::class, 'forceDelete']);
-
+    Route::patch('/restore/{id}', [BookingSeatController::class, 'restore']);
 });
 
 
@@ -121,6 +122,7 @@ Route::prefix('coupons')->group(function () {
     Route::put('/{id}', [CouponController::class, 'update']);
     Route::delete('/soft/{id}', [CouponController::class, 'softDelete']); // nếu dùng soft delete
     Route::delete('/{id}', [CouponController::class, 'forceDelete']); // xóa cứng
+    Route::patch('/restore/{id}', [CouponController::class, 'restore']); // khôi phục
 });
 
 Route::prefix('cinemas')->group(function () {
@@ -134,13 +136,19 @@ Route::prefix('cinemas')->group(function () {
 Route::prefix('users')->group(function () {
     Route::get('/', [UserAccountController::class, 'index']);        // Danh sách người dùng
     Route::post('/', [UserAccountController::class, 'store']);       // Tạo người dùng mới
-    Route::get('{id}', [UserAccountController::class, 'show']);      // Lấy chi tiết người dùng
-    Route::put('{id}', [UserAccountController::class, 'update']);    // Cập nhật người dùng
-    Route::delete('{id}', [UserAccountController::class, 'destroy']); // Xoá mềm người dùng
+    Route::get('/{id}', [UserAccountController::class, 'show']);      // Lấy chi tiết người dùng
+    Route::put('/{id}', [UserAccountController::class, 'update']);    // Cập nhật người dùng
+    Route::delete('/soft/{id}', [UserAccountController::class, 'destroy']); // Xoá mềm người dùng
+    Route::patch('/restore/{id}', [UserAccountController::class, 'restore']); // Khôi phục người dùng
+    Route::delete('/{id}', [UserAccountController::class, 'forceDelete']); // Xoá cứng người dùng
 });
 
-Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
+Route::prefix('auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
-Route::get('/setting', [SettingController::class, 'show']);
-Route::put('/setting', [SettingController::class, 'update']);
+Route::prefix('setting')->group(function () {
+    Route::get('/', [SettingController::class, 'show']);
+    Route::put('/', [SettingController::class, 'update']);
+});

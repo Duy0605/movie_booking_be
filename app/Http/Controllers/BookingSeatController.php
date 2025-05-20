@@ -9,26 +9,26 @@ use App\Models\Seat;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Models\ShowTime;
+use App\Response\ApiResponse;
 
 class BookingSeatController extends Controller
 {
-    // Lấy danh sách booking seats chưa bị xóa
+    /**
+     * Lấy danh sách booking seats chưa bị xóa (is_deleted = false)
+     */
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 10); // số lượng mỗi trang
+        $perPage = $request->input('per_page', 10);
         $bookingSeats = BookingSeat::with(['booking', 'seat'])
             ->where('is_deleted', false)
             ->paginate($perPage);
 
-        return response()->json([
-            'code' => 200,
-            'message' => 'Lấy danh sách booking seats thành công',
-            'data' => $bookingSeats
-        ]);
+        return ApiResponse::success($bookingSeats, 'Lấy danh sách booking seats thành công');
     }
 
-
-    // Tạo mới booking seat
+    /**
+     * Tạo mới booking seat
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -36,68 +36,54 @@ class BookingSeatController extends Controller
             'seat_id' => 'required|string|exists:seat,seat_id',
         ]);
 
-        // Kiểm tra xem booking và seat có còn hợp lệ (chưa bị xóa)
-        $booking = Booking::where('booking_id', $request->booking_id)
-            ->where('is_deleted', false)
-            ->first();
-        $seat = Seat::where('seat_id', $request->seat_id)
-            ->where('is_deleted', false)
-            ->first();
+        $booking = Booking::where('booking_id', $request->booking_id)->where('is_deleted', false)->first();
+        $seat = Seat::where('seat_id', $request->seat_id)->where('is_deleted', false)->first();
 
         if (!$booking) {
-            return response()->json(['code' => 404, 'message' => 'Booking không tồn tại hoặc đã bị xóa']);
+            return ApiResponse::error('Booking không tồn tại hoặc đã bị xóa', 404);
         }
+
         if (!$seat) {
-            return response()->json(['code' => 404, 'message' => 'Seat không tồn tại hoặc đã bị xóa']);
+            return ApiResponse::error('Seat không tồn tại hoặc đã bị xóa', 404);
         }
 
-        // Lấy showtime của booking
-        $showtime = ShowTime::where('showtime_id', $booking->showtime_id)
-            ->where('is_deleted', false)
-            ->first();
-
+        $showtime = ShowTime::where('showtime_id', $booking->showtime_id)->where('is_deleted', false)->first();
         if (!$showtime) {
-            return response()->json(['code' => 404, 'message' => 'Suất chiếu không tồn tại hoặc đã bị xóa']);
+            return ApiResponse::error('Suất chiếu không tồn tại hoặc đã bị xóa', 404);
         }
 
-        // Kiểm tra ghế có thuộc phòng của suất chiếu không
+
         if ($seat->room_id !== $showtime->room_id) {
-            return response()->json([
-                'code' => 400,
-                'message' => 'Ghế không thuộc phòng của suất chiếu này'
-            ]);
+            return ApiResponse::error('Ghế không thuộc phòng của suất chiếu này', 400);
         }
 
-        // Kiểm tra seat đã được đặt trong booking khác chưa (cùng showtime)
+
         $exists = BookingSeat::where('seat_id', $request->seat_id)
             ->whereHas('booking', function ($query) use ($booking) {
                 $query->where('showtime_id', $booking->showtime_id)
                     ->whereIn('status', ['PENDING', 'CONFIRMED'])
                     ->where('is_deleted', false);
-            })->where('is_deleted', false)
-            ->exists();
+            })->where('is_deleted', false)->exists();
 
         if ($exists) {
-            return response()->json([
-                'code' => 409,
-                'message' => 'Ghế này đã được đặt cho suất chiếu tương ứng rồi'
-            ]);
+            return ApiResponse::error('Ghế này đã được đặt cho suất chiếu tương ứng rồi', 409);
         }
 
         $bookingSeat = BookingSeat::create([
             'booking_seat_id' => Str::uuid()->toString(),
             'booking_id' => $request->booking_id,
             'seat_id' => $request->seat_id,
-            'is_deleted' => false
+            'is_deleted' => false,
         ]);
+
         $booking->updateTotalPrice();
-        return response()->json([
-            'code' => 201,
-            'message' => 'Tạo booking seat thành công',
-            'data' => $bookingSeat
-        ]);
+
+        return ApiResponse::success($bookingSeat, 'Tạo booking seat thành công', 201);
     }
-    // Lấy chi tiết booking seat theo id
+
+    /**
+     * Lấy chi tiết booking seat theo ID
+     */
     public function show($id)
     {
         try {
@@ -106,20 +92,15 @@ class BookingSeatController extends Controller
                 ->where('is_deleted', false)
                 ->firstOrFail();
 
-            return response()->json([
-                'code' => 200,
-                'message' => 'Lấy thông tin booking seat thành công',
-                'data' => $bookingSeat
-            ]);
+            return ApiResponse::success($bookingSeat, 'Lấy thông tin booking seat thành công');
         } catch (ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'message' => 'Booking seat không tồn tại'
-            ]);
+            return ApiResponse::error('Booking seat không tồn tại', 404);
         }
     }
 
-    // Cập nhật booking seat
+    /**
+     * Cập nhật booking seat
+     */
     public function update(Request $request, $id)
     {
         try {
@@ -134,11 +115,10 @@ class BookingSeatController extends Controller
 
             if ($request->has('booking_id')) {
                 $booking = Booking::where('booking_id', $request->booking_id)
-                    ->where('is_deleted', false)
-                    ->first();
+                    ->where('is_deleted', false)->first();
 
                 if (!$booking) {
-                    return response()->json(['code' => 404, 'message' => 'Booking không tồn tại hoặc đã bị xóa']);
+                    return ApiResponse::error('Booking không tồn tại hoặc đã bị xóa', 404);
                 }
 
                 $bookingSeat->booking_id = $request->booking_id;
@@ -146,28 +126,23 @@ class BookingSeatController extends Controller
 
             if ($request->has('seat_id')) {
                 $seat = Seat::where('seat_id', $request->seat_id)
-                    ->where('is_deleted', false)
-                    ->first();
+                    ->where('is_deleted', false)->first();
 
                 if (!$seat) {
-                    return response()->json(['code' => 404, 'message' => 'Seat không tồn tại hoặc đã bị xóa']);
+                    return ApiResponse::error('Seat không tồn tại hoặc đã bị xóa', 404);
                 }
 
-                // Kiểm tra seat đã được đặt cho suất chiếu booking hiện tại chưa
+
                 $exists = BookingSeat::where('seat_id', $request->seat_id)
                     ->where('booking_seat_id', '!=', $id)
                     ->whereHas('booking', function ($query) use ($bookingSeat) {
                         $query->where('showtime_id', $bookingSeat->booking->showtime_id)
                             ->where('status', 'CONFIRMED')
                             ->where('is_deleted', false);
-                    })->where('is_deleted', false)
-                    ->exists();
+                    })->where('is_deleted', false)->exists();
 
                 if ($exists) {
-                    return response()->json([
-                        'code' => 409,
-                        'message' => 'Ghế này đã được đặt cho suất chiếu tương ứng'
-                    ]);
+                    return ApiResponse::error('Ghế này đã được đặt cho suất chiếu tương ứng', 409);
                 }
 
                 $bookingSeat->seat_id = $request->seat_id;
@@ -175,17 +150,15 @@ class BookingSeatController extends Controller
 
             $bookingSeat->save();
 
-            return response()->json([
-                'code' => 200,
-                'message' => 'Cập nhật booking seat thành công',
-                'data' => $bookingSeat
-            ]);
+            return ApiResponse::success($bookingSeat, 'Cập nhật booking seat thành công');
         } catch (ModelNotFoundException $e) {
-            return response()->json(['code' => 404, 'message' => 'Booking seat không tồn tại']);
+            return ApiResponse::error('Booking seat không tồn tại', 404);
         }
     }
 
-    // Xóa mềm booking seat (update is_deleted = true)
+    /**
+     * Xóa mềm booking seat
+     */
     public function destroy($id)
     {
         try {
@@ -196,39 +169,54 @@ class BookingSeatController extends Controller
             $bookingSeat->is_deleted = true;
             $bookingSeat->save();
 
-            return response()->json([
-                'code' => 200,
-                'message' => 'Xóa booking seat thành công (soft delete)'
-            ]);
+            return ApiResponse::success(null, 'Xóa booking seat thành công (soft delete)');
         } catch (ModelNotFoundException $e) {
-            return response()->json(['code' => 404, 'message' => 'Booking seat không tồn tại']);
+            return ApiResponse::error('Booking seat không tồn tại', 404);
         }
     }
+
+
+    //Xóa vĩnh viễn booking seat
 
     public function forceDelete($id)
     {
         try {
             $bookingSeat = BookingSeat::where('booking_seat_id', $id)->firstOrFail();
-            $bookingSeat->delete(); // Xóa khỏi DB
-            return response()->json([
-                'code' => 200,
-                'message' => 'Xóa booking seat vĩnh viễn thành công'
-            ]);
+            $bookingSeat->delete();
+
+            return ApiResponse::success(null, 'Xóa booking seat vĩnh viễn thành công');
         } catch (ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'message' => 'Booking seat không tồn tại'
-            ]);
+            return ApiResponse::error('Booking seat không tồn tại', 404);
         }
     }
 
-    // Lấy danh sách ghế theo suất chiếu
+
+    //Khôi phục booking seat đã bị xóa mềm
+
+    public function restore($id)
+    {
+        try {
+            $bookingSeat = BookingSeat::where('booking_seat_id', $id)
+                ->where('is_deleted', true)
+                ->firstOrFail();
+
+            $bookingSeat->is_deleted = false;
+            $bookingSeat->save();
+
+            return ApiResponse::success($bookingSeat, 'Khôi phục booking seat thành công');
+        } catch (ModelNotFoundException $e) {
+            return ApiResponse::error('Booking seat không tồn tại hoặc chưa bị xóa mềm', 404);
+        }
+    }
+
+
+    //Lấy danh sách ghế theo suất chiếu (kèm trạng thái đã đặt hay chưa)
+
     public function getSeatsByShowtime($showtimeId)
     {
-
         $showtime = ShowTime::where('showtime_id', $showtimeId)->where('is_deleted', false)->first();
         if (!$showtime) {
-            return response()->json(['code' => 404, 'message' => 'Suất chiếu không tồn tại']);
+            return ApiResponse::error('Suất chiếu không tồn tại', 404);
         }
 
         $perPage = request()->input('per_page', 20);
@@ -238,7 +226,6 @@ class BookingSeatController extends Controller
             ->paginate($perPage);
 
 
-            
         $bookedSeatIds = BookingSeat::whereHas('booking', function ($query) use ($showtimeId) {
             $query->where('showtime_id', $showtimeId)
                 ->whereIn('status', ['PENDING', 'CONFIRMED'])
@@ -251,13 +238,10 @@ class BookingSeatController extends Controller
             $seat->is_booked = in_array($seat->seat_id, $bookedSeatIds);
             return $seat;
         });
+
         $seats->setCollection($seatsCollection);
 
-        return response()->json([
-            'code' => 200,
-            'message' => 'Danh sách ghế theo suất chiếu',
-            'data' => $seats
-        ]);
+        return ApiResponse::success($seats, 'Danh sách ghế theo suất chiếu');
     }
 
 }

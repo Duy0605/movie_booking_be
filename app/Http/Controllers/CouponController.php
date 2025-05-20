@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Coupon;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
+use App\Models\Coupon;
 use App\Models\UserAccount;
 use App\Mail\CouponMail;
-use Illuminate\Support\Facades\Mail;
+use App\Response\ApiResponse;
 
 class CouponController extends Controller
 {
@@ -107,6 +108,24 @@ class CouponController extends Controller
         $coupon->save();
 
         return response()->json(['code' => 200, 'message' => 'Đã vô hiệu hóa coupon']);
+    }
+
+    //Khôi phục coupon
+    public function restore($id)
+    {
+        $coupon = Coupon::find($id);
+        if (!$coupon) {
+            return ApiResponse::error('Coupon không tồn tại', 404);
+        }
+
+        if ($coupon->is_active) {
+            return ApiResponse::error('Coupon chưa bị vô hiệu hóa, không thể khôi phục', 400);
+        }
+
+        $coupon->is_active = true;
+        $coupon->save();
+
+        return ApiResponse::success($coupon, 'Khôi phục coupon thành công');
     }
 
     // Xóa cứng coupon

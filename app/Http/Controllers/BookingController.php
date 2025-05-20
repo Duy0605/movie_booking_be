@@ -8,26 +8,26 @@ use App\Models\Payment;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use App\Response\ApiResponse;
 
 class BookingController extends Controller
 {
-    // Lấy danh sách booking
+    
+     //Lấy danh sách tất cả booking (chỉ những cái chưa bị xóa mềm)
+    
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 10); // Số bản ghi/trang, mặc định 10
+        $perPage = $request->input('per_page', 10);
         $bookings = Booking::with(['user', 'showtime.movie', 'bookingSeats'])
             ->where('is_deleted', false)
             ->paginate($perPage);
 
-        return response()->json([
-            'code' => 200,
-            'message' => 'Lấy danh sách booking thành công',
-            'data' => $bookings
-        ]);
+        return ApiResponse::success($bookings, 'Lấy danh sách booking thành công');
     }
 
-
-    // Tạo booking mới
+    
+     //Tạo mới một booking và gán ghế (nếu có)
+    
     public function store(Request $request)
     {
         $request->validate([
@@ -58,29 +58,33 @@ class BookingController extends Controller
             }
 
             DB::commit();
-            return response()->json(['code' => 201, 'message' => 'Tạo booking thành công', 'data' => $booking]);
+            return ApiResponse::success($booking, 'Tạo booking thành công', 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['code' => 500, 'message' => 'Lỗi tạo booking', 'error' => $e->getMessage()]);
+            return ApiResponse::error('Lỗi tạo booking', 500, $e->getMessage());
         }
     }
 
-    // Xem chi tiết booking
+    
+    // Xem chi tiết một booking theo ID
+    
     public function show($id)
     {
         $booking = Booking::with(['user', 'showtime.movie', 'bookingSeats'])->find($id);
         if (!$booking) {
-            return response()->json(['code' => 404, 'message' => 'Booking not found']);
+            return ApiResponse::error('Booking không tồn tại', 404);
         }
-        return response()->json(['code' => 200, 'message' => 'Success', 'data' => $booking]);
+        return ApiResponse::success($booking, 'Lấy booking thành công');
     }
 
-    // Cập nhật booking (ví dụ đổi trạng thái)
+    
+     //Cập nhật trạng thái của booking (PENDING, CONFIRMED, CANCELLED)
+    
     public function update(Request $request, $id)
     {
         $booking = Booking::find($id);
         if (!$booking) {
-            return response()->json(['code' => 404, 'message' => 'Booking not found']);
+            return ApiResponse::error('Booking không tồn tại', 404);
         }
 
         $request->validate([
@@ -90,24 +94,26 @@ class BookingController extends Controller
         $booking->status = $request->status ?? $booking->status;
         $booking->save();
 
-        return response()->json(['code' => 200, 'message' => 'Booking updated', 'data' => $booking]);
+        return ApiResponse::success($booking, 'Cập nhật trạng thái thành công');
     }
 
-    // cap nhat gia tien
+    
+    //Cập nhật tổng giá tiền của booking (nếu chưa thanh toán)
+    
     public function updateTotalPrice(Request $request, $id)
     {
         $booking = Booking::find($id);
         if (!$booking) {
-            return response()->json(['code' => 404, 'message' => 'Booking không tồn tại']);
+            return ApiResponse::error('Booking không tồn tại', 404);
         }
 
-        // Kiểm tra nếu đã có payment COMPLETED
+
         $hasCompletedPayment = Payment::where('booking_id', $booking->booking_id)
             ->where('payment_status', 'COMPLETED')
             ->exists();
 
         if ($hasCompletedPayment) {
-            return response()->json(['code' => 403, 'message' => 'Booking đã thanh toán, không thể cập nhật giá tiền']);
+            return ApiResponse::error('Booking đã thanh toán, không thể cập nhật giá tiền', 403);
         }
 
         $request->validate([
@@ -117,20 +123,41 @@ class BookingController extends Controller
         $booking->total_price = $request->total_price;
         $booking->save();
 
-        return response()->json(['code' => 200, 'message' => 'Cập nhật giá tiền thành công', 'data' => $booking]);
+        return ApiResponse::success($booking, 'Cập nhật giá tiền thành công');
     }
 
-    // Xóa booking (soft delete)
+    
+    //Xóa mềm một booking (chuyển is_deleted = true)
+    
     public function destroy($id)
     {
         $booking = Booking::find($id);
         if (!$booking) {
-            return response()->json(['code' => 404, 'message' => 'Booking not found']);
+            return ApiResponse::error('Booking không tồn tại', 404);
         }
 
         $booking->is_deleted = true;
         $booking->save();
 
-        return response()->json(['code' => 200, 'message' => 'Booking deleted']);
+        return ApiResponse::success(null, 'Xóa booking thành công');
+    }
+
+    
+    //Khôi phục một booking đã bị xóa mềm
+    
+    public function restore($id)
+    {
+        $booking = Booking::where('booking_id', $id)
+            ->where('is_deleted', true)
+            ->first();
+
+        if (!$booking) {
+            return ApiResponse::error('Không tìm thấy booking đã bị xóa mềm', 404);
+        }
+
+        $booking->is_deleted = false;
+        $booking->save();
+
+        return ApiResponse::success($booking, 'Khôi phục booking thành công');
     }
 }
