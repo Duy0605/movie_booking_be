@@ -30,6 +30,7 @@ Route::prefix('seats')->group(function () {
     Route::get('/', [SeatController::class, 'index']);
     Route::post('/', [SeatController::class, 'store']);
     Route::get('/{id}', [SeatController::class, 'show']);
+    Route::get('/roomId/{id}', [SeatController::class, 'showSeatByMovieId']);
     Route::put('/{id}', [SeatController::class, 'update']);
     Route::delete('/soft/{id}', [SeatController::class, 'softDelete']);
     Route::put('/restore/{id}', [SeatController::class, 'restore']);
@@ -99,8 +100,9 @@ Route::prefix('payment')->group(function () {
     Route::delete('/{id}', [PaymentController::class, 'destroy']);
     Route::patch('/payments/{id}/complete', [PaymentController::class, 'markCompleted']);
     Route::post('/proxy-payos', [PaymentController::class, 'proxyPayOS']);
-
+    Route::get('/proxy-payos/{id}', [PaymentController::class, 'getPaymentLinkInfo']);
 });
+
 Route::prefix('booking-seats')->group(function () {
     Route::get('/showtimes/{showtimeId}/seats', [BookingSeatController::class, 'getSeatsByShowtime']);
     Route::get('/', [BookingSeatController::class, 'index']);

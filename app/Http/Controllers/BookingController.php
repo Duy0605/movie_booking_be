@@ -68,7 +68,7 @@ class BookingController extends Controller
     // Xem chi tiết booking
     public function show($id)
     {
-        $booking = Booking::with(['user', 'showtime.movie', 'bookingSeats'])->find($id);
+        $booking = Booking::with(['user', 'showtime.movie', 'bookingSeats.seat'])->find($id);
         if (!$booking) {
             return response()->json(['code' => 404, 'message' => 'Booking not found']);
         }

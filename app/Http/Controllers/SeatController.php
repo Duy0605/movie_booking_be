@@ -58,6 +58,17 @@ class SeatController extends Controller
         return ApiResponse::success($seat, 'Lấy thông tin ghế thành công');
     }
 
+    public function showSeatByMovieId($id)
+    {
+        $seat = Seat::where('room_id', $id)->where('is_deleted', false)->get();
+
+        if (!$seat) {
+            return ApiResponse::error('Seat not found', 404);
+        }
+
+        return ApiResponse::success($seat, 'Lấy thông tin ghế thành công');
+    }
+
     // Cập nhật thông tin ghế
     public function update(Request $request, $id)
     {
