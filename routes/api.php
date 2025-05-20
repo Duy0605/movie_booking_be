@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('rooms')->group(function () {
     Route::get('/', [RoomController::class, 'index']);             // GET /api/rooms
     Route::post('/', [RoomController::class, 'store']);            // POST /api/rooms
+    Route::get('/cinema/{cinema_id}', [RoomController::class, 'getRoomsByCinema']);
     Route::get('{id}', [RoomController::class, 'show']);           // GET /api/rooms/{id}
     Route::put('{id}', [RoomController::class, 'update']);
     Route::put('update-capacity/{id}', [RoomController::class, 'updateCapacity']);  // PUT /api/rooms/{id}

@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Room;
+use App\Models\Cinema;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use App\Response\ApiResponse;
@@ -197,5 +198,30 @@ class RoomController extends Controller
 
         $room->delete();
         return ApiResponse::success(null, 'Room permanently deleted');
+    }
+
+    // Lấy danh sách phòng theo cinema_id
+    public function getRoomsByCinema(Request $request, $cinema_id)
+    {
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+
+        // Check if cinema exists and is not deleted
+        $cinema = Cinema::where('cinema_id', $cinema_id)
+            ->where('is_deleted', false)
+            ->first();
+
+        if (!$cinema) {
+            return ApiResponse::error('Rạp không tồn tại hoặc đã bị xóa', 404);
+        }
+
+        $rooms = Room::with(['cinema' => function ($query) {
+            $query->select('cinema_id', 'name')->where('is_deleted', false);
+        }])
+        ->where('cinema_id', $cinema_id)
+        ->where('is_deleted', false)
+        ->paginate($perPage, ['*'], 'page', $page);
+
+        return ApiResponse::success($rooms, 'Danh sách phòng theo rạp');
     }
 }
