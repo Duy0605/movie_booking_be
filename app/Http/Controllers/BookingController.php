@@ -70,7 +70,7 @@ class BookingController extends Controller
     
     public function show($id)
     {
-        $booking = Booking::with(['user', 'showtime.movie', 'bookingSeats'])->find($id);
+        $booking = Booking::with(['user', 'showtime.movie', 'bookingSeats.seat'])->find($id);
         if (!$booking) {
             return ApiResponse::error('Booking không tồn tại', 404);
         }

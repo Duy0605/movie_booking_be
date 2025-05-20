@@ -178,8 +178,6 @@ class PaymentController extends Controller
         $payosApiUrl = env('PAYOS_API_URL');
         $checksumKey = env('PAYOS_CHECKSUM_KEY');
 
-        // \Log::info('PayOS Proxy Request:', $request->all());
-
         // Prepare data for signature
         $data = $request->all();
         $signatureFields = [
@@ -206,7 +204,6 @@ class PaymentController extends Controller
         // Add signature to the request data
         $data['signature'] = $signature;
 
-        // \Log::info('PayOS Signed Request:', $data);
 
         $response = Http::withHeaders([
             'x-client-id' => $payosClientId,
@@ -215,17 +212,66 @@ class PaymentController extends Controller
         ])->post($payosApiUrl, $data);
 
         $responseData = $response->json();
-        // \Log::info('PayOS Proxy Response:', $responseData);
-
-        // Log the checkoutUrl specifically
-        if (isset($responseData['data']['checkoutUrl'])) {
-            // \Log::info('PayOS Checkout URL:', ['checkoutUrl' => $responseData['data']['checkoutUrl']]);
-        }
 
         return response()->json($responseData)
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
             ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
             ->header('Access-Control-Allow-Credentials', 'true');
+    }
+
+    // Lấy thông tin link thanh toán từ PayOS
+    public function getPaymentLinkInfo($orderCode)
+    {
+        $payosClientId = env('PAYOS_CLIENT_ID');
+        $payosApiKey = env('PAYOS_API_KEY');
+        $payosApiGetUrl = env('PAYOS_API_URL');
+
+        // Kiểm tra biến môi trường
+        if (!$payosClientId || !$payosApiKey || !$payosApiGetUrl) {
+            \Log::error('Missing PayOS configuration for getPaymentLinkInfo');
+            return response()->json([
+                'code' => 500,
+                'message' => 'Lỗi cấu hình server, vui lòng thử lại sau'
+            ], 500);
+        }
+
+        try {
+            \Log::info('Fetching PayOS payment link info:', ['orderCode' => $orderCode]);
+
+            // Gửi yêu cầu GET tới PayOS API
+            $response = Http::withHeaders([
+                'x-client-id' => $payosClientId,
+                'x-api-key' => $payosApiKey,
+                'Content-Type' => 'application/json',
+            ])->get("{$payosApiGetUrl}/{$orderCode}");
+
+            $responseData = $response->json();
+            \Log::info('PayOS Payment Link Response:', $responseData);
+
+            // Kiểm tra phản hồi từ PayOS
+            if ($response->successful() && isset($responseData['data'])) {
+                return response()->json([
+                    'code' => 200,
+                    'message' => 'Lấy thông tin link thanh toán thành công',
+                    'data' => $responseData['data']
+                ]);
+            } else {
+                \Log::error('PayOS API error:', ['response' => $responseData]);
+                return response()->json([
+                    'code' => 400,
+                    'message' => $responseData['desc'] ?? 'Không thể lấy thông tin link thanh toán'
+                ], 400);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching PayOS payment link info:', [
+                'orderCode' => $orderCode,
+                'error' => $e->getMessage()
+            ]);
+            return response()->json([
+                'code' => 500,
+                'message' => 'Lỗi khi lấy thông tin link thanh toán: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
