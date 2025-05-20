@@ -12,8 +12,8 @@ class CinemaController extends Controller
     // Lấy danh sách rạp
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 10); // Số lượng bản ghi mỗi trang (mặc định 10)
-        $page = $request->input('page', 1);         // Trang hiện tại (mặc định 1)
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
 
         $cinemas = Cinema::where('is_deleted', false)
             ->paginate($perPage, ['*'], 'page', $page);
@@ -21,6 +21,17 @@ class CinemaController extends Controller
         return ApiResponse::success($cinemas, 'Danh sách rạp chiếu phim');
     }
 
+    // Lấy danh sách rạp đã xóa
+    public function getDeleted(Request $request)
+    {
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+
+        $cinemas = Cinema::where('is_deleted', true)
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        return ApiResponse::success($cinemas, 'Danh sách rạp chiếu phim đã xóa');
+    }
 
     // Tạo mới rạp
     public function store(Request $request)
@@ -53,7 +64,6 @@ class CinemaController extends Controller
         return ApiResponse::success($cinema, 'Tạo rạp chiếu phim thành công', 201);
     }
 
-
     // Lấy thông tin 1 rạp
     public function show($id)
     {
@@ -71,13 +81,12 @@ class CinemaController extends Controller
     // Cập nhật thông tin rạp
     public function update(Request $request, $id)
     {
-        // Validate bắt buộc tên và địa chỉ không để trống
         $request->validate([
-            'name' => 'required|string',
-            'address' => 'required|string',
+            'name' => 'sometimes|string',
+            'address' => 'sometimes|string',
         ], [
-            'name.required' => 'Tên rạp không được để trống',
-            'address.required' => 'Địa chỉ rạp không được để trống',
+            'name.string' => 'Tên rạp phải là chuỗi ký tự',
+            'address.string' => 'Địa chỉ rạp phải là chuỗi ký tự',
         ]);
 
         $cinema = Cinema::where('cinema_id', $id)
@@ -88,28 +97,31 @@ class CinemaController extends Controller
             return ApiResponse::error('Không tìm thấy rạp để cập nhật', 404);
         }
 
-        // Kiểm tra trùng tên hoặc trùng địa chỉ với các rạp khác (không tính rạp hiện tại)
-        $exists = Cinema::where(function ($query) use ($request) {
-            $query->where('name', $request->name)
-                ->orWhere('address', $request->address);
+        $updateData = [
+            'name' => $request->has('name') ? $request->name : $cinema->name,
+            'address' => $request->has('address') ? $request->address : $cinema->address,
+        ];
+
+        $exists = Cinema::where(function ($query) use ($updateData) {
+            $query->where('name', $updateData['name'])
+                ->orWhere('address', $updateData['address']);
         })
             ->where('is_deleted', false)
+            ->where('cinema_id', '!=', $id)
             ->exists();
 
         if ($exists) {
             return ApiResponse::error('Tên hoặc địa chỉ rạp đã tồn tại', 400);
         }
 
-        $cinema->update([
-            'name' => $request->name,
-            'address' => $request->address,
-        ]);
+        if ($updateData['name'] !== $cinema->name || $updateData['address'] !== $cinema->address) {
+            $cinema->update($updateData);
+        }
 
         return ApiResponse::success($cinema, 'Cập nhật rạp chiếu phim thành công');
     }
 
-
-    // Xoá mềm rạp
+    // Xóa mềm rạp
     public function destroy($id)
     {
         $cinema = Cinema::where('cinema_id', $id)
@@ -117,10 +129,25 @@ class CinemaController extends Controller
             ->first();
 
         if (!$cinema) {
-            return ApiResponse::error('Không tìm thấy rạp để xoá', 404);
+            return ApiResponse::error('Không tìm thấy rạp để xóa', 404);
         }
 
         $cinema->update(['is_deleted' => true]);
-        return ApiResponse::success(null, 'Xoá rạp chiếu phim thành công');
+        return ApiResponse::success(null, 'Xóa rạp chiếu phim thành công');
+    }
+
+    // Khôi phục rạp đã xóa mềm
+    public function restore($id)
+    {
+        $cinema = Cinema::where('cinema_id', $id)
+            ->where('is_deleted', true)
+            ->first();
+
+        if (!$cinema) {
+            return ApiResponse::error('Không tìm thấy rạp để khôi phục hoặc rạp chưa bị xóa', 404);
+        }
+
+        $cinema->update(['is_deleted' => false]);
+        return ApiResponse::success($cinema, 'Khôi phục rạp chiếu phim thành công');
     }
 }

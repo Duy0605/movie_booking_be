@@ -128,11 +128,13 @@ Route::prefix('coupons')->group(function () {
 });
 
 Route::prefix('cinemas')->group(function () {
+    Route::get('/deleted', [CinemaController::class, 'getDeleted']); // Lấy danh sách rạp đã xóa mềm
     Route::get('/', [CinemaController::class, 'index']);           // Lấy danh sách tất cả rạp chiếu
     Route::post('/', [CinemaController::class, 'store']);          // Thêm rạp mới
     Route::get('/{id}', [CinemaController::class, 'show']);        // Lấy thông tin 1 rạp theo ID
     Route::put('/{id}', [CinemaController::class, 'update']);      // Cập nhật rạp
     Route::delete('/{id}', [CinemaController::class, 'destroy']);  // Xoá mềm rạp
+    Route::put('/restore/{id}', [CinemaController::class, 'restore']);  // Khôi phục rạp
 });
 
 Route::prefix('users')->group(function () {
