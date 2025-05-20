@@ -13,6 +13,7 @@ use App\Http\Controllers\CinemaController;
 use App\Http\Controllers\UserAccountController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SettingController;
 
 Route::prefix('rooms')->group(function () {
     Route::get('/', [RoomController::class, 'index']);             // GET /api/rooms
@@ -141,3 +142,5 @@ Route::prefix('users')->group(function () {
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 
+Route::get('/setting', [SettingController::class, 'show']);
+Route::put('/setting', [SettingController::class, 'update']);

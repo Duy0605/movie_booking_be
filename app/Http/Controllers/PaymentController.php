@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Payment;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
+use App\Mail\New_movie_ticket;
 
 class PaymentController extends Controller
 {
@@ -123,6 +125,47 @@ class PaymentController extends Controller
         $payment->payment_status = 'COMPLETED';
         $payment->save();
 
+
+        // Lấy thông tin booking và user
+        $booking = $payment->booking;
+        $user = $booking->user;
+
+        // Lấy thông tin phim, suất chiếu, phòng, rạp
+        $showtime = $booking->showtime;
+        $movie = $showtime->movie ?? null;
+        $room = $showtime->room ?? null;///
+        $cinema = $room->cinema ?? null;///
+
+        // Lấy danh sách ghế đã đặt
+        $seats = $booking->bookingSeats->map(function ($bs) {
+            return $bs->seat->seat_number ?? '';
+        })->toArray();
+        $seatsString = implode(', ', $seats);
+
+        // Chuẩn bị dữ liệu gửi mail
+        $customerName = $user->full_name ?? 'Khách hàng';
+        $bookingId = $booking->booking_id;
+        $movieTitle = $movie->title ?? 'Tên phim';
+        $cinemaName = $cinema->name ?? 'Rạp chiếu';
+        $roomName = $room->room_name ?? 'Phòng chiếu';
+        $showtimeStr = $showtime ? $showtime->start_time : 'Thời gian chiếu';
+        $totalPrice = $payment->amount;
+        $barcodeUrl = $payment->barcode ?? '';
+        $ticketCode = $payment->payment_id;
+
+        Mail::to($user->email)->send(new New_movie_ticket(
+            $customerName,
+            $bookingId,
+            $movieTitle,
+            $cinemaName,
+            $roomName,
+            $showtimeStr,
+            $seatsString,
+            $totalPrice,
+            $barcodeUrl,
+            $ticketCode
+        ));
+
         return response()->json(['code' => 200, 'message' => 'Cập nhật trạng thái sang COMPLETED thành công', 'data' => $payment]);
     }
 
@@ -133,7 +176,7 @@ class PaymentController extends Controller
         $payosApiUrl = env('PAYOS_API_URL');
         $checksumKey = env('PAYOS_CHECKSUM_KEY');
 
-        \Log::info('PayOS Proxy Request:', $request->all());
+        // \Log::info('PayOS Proxy Request:', $request->all());
 
         // Prepare data for signature
         $data = $request->all();
@@ -161,7 +204,7 @@ class PaymentController extends Controller
         // Add signature to the request data
         $data['signature'] = $signature;
 
-        \Log::info('PayOS Signed Request:', $data);
+        // \Log::info('PayOS Signed Request:', $data);
 
         $response = Http::withHeaders([
             'x-client-id' => $payosClientId,
@@ -170,11 +213,11 @@ class PaymentController extends Controller
         ])->post($payosApiUrl, $data);
 
         $responseData = $response->json();
-        \Log::info('PayOS Proxy Response:', $responseData);
+        // \Log::info('PayOS Proxy Response:', $responseData);
 
         // Log the checkoutUrl specifically
         if (isset($responseData['data']['checkoutUrl'])) {
-            \Log::info('PayOS Checkout URL:', ['checkoutUrl' => $responseData['data']['checkoutUrl']]);
+            // \Log::info('PayOS Checkout URL:', ['checkoutUrl' => $responseData['data']['checkoutUrl']]);
         }
 
         return response()->json($responseData)

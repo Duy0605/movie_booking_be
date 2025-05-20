@@ -2,10 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NewMovieMail;
 use Illuminate\Http\Request;
 use App\Models\Movie;
+use App\Models\UserAccount;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+
+use Illuminate\Support\Facades\Mail;
+
+
+
 
 class MovieController extends Controller
 {
@@ -63,7 +70,22 @@ class MovieController extends Controller
             'poster_url' => $request->poster_url,
             'is_deleted' => false,
         ]);
-        // send mail
+        // Gửi email cho tất cả user có email
+        $users = UserAccount::whereNotNull('email')->get();
+        foreach ($users as $user) {
+            Mail::to($user->email)->queue(new NewMovieMail(
+                $user->full_name,                  // customer_name
+                $movie->title,
+                $movie->description,
+                $movie->release_date,
+                $movie->genre,
+                $movie->poster_url,
+                $movie->movie_id
+            ));
+        }
+
+
+
         return response()->json([
             'code' => 201,
             'message' => 'Tạo phim thành công',
@@ -258,5 +280,4 @@ class MovieController extends Controller
             'data' => $movies
         ]);
     }
-
 }

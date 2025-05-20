@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use App\Models\Coupon;
 use Illuminate\Support\Str;
 
+use App\Models\UserAccount;
+use App\Mail\CouponMail;
+use Illuminate\Support\Facades\Mail;
+
 class CouponController extends Controller
 {
     // Lấy danh sách coupon
@@ -41,7 +45,19 @@ class CouponController extends Controller
             'is_active' => $request->is_active ?? true,
         ]);
 
-        return response()->json(['code' => 201, 'message' => 'Tạo coupon thành công', 'data' => $coupon]);
+        // Lấy danh sách người dùng
+        $users = UserAccount::all();
+
+        foreach ($users as $user) {
+            Mail::to($user->email)->queue(new CouponMail(
+                $user->full_name,
+                $coupon->code,
+                $coupon->expiry_date->format('d/m/Y'),
+                $coupon->discount
+            ));
+        }
+
+        return response()->json(['code' => 201, 'message' => 'Tạo coupon thành công và đã gửi mail', 'data' => $coupon]);
     }
 
     // Xem chi tiết coupon
