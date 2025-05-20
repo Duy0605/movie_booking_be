@@ -58,7 +58,8 @@ class SeatController extends Controller
         return ApiResponse::success($seat, 'Lấy thông tin ghế thành công');
     }
 
-    public function showSeatByMovieId($id)
+    // Lấy danh sách ghế theo room_id
+    public function showSeatByRoomId($id)
     {
         $seat = Seat::where('room_id', $id)->where('is_deleted', false)->get();
 
@@ -79,22 +80,22 @@ class SeatController extends Controller
         }
 
         $request->validate([
-        'seat_number' => [
-            'sometimes',
-            'required',
-            'string',
-            'max:10',
-            Rule::unique('seat')->where(function ($query) use ($request, $seat) {
-                // Nếu room_id được gửi trong request thì lấy giá trị đó, nếu không thì lấy room_id hiện tại của ghế
-                $roomId = $request->room_id ?? $seat->room_id;
-                return $query->where('room_id', $roomId)->where('is_deleted', false);
-            })->ignore($seat->seat_id, 'seat_id'),  // bỏ qua bản ghi hiện tại theo khóa chính seat_id
-        ],
-        'seat_type' => 'sometimes|in:STANDARD,VIP,COUPLE',
-        'room_id' => 'sometimes|required|string',
-    ], [
-        'seat_number.unique' => 'Số ghế đã tồn tại trong phòng này.',
-    ]);
+            'seat_number' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:10',
+                Rule::unique('seat')->where(function ($query) use ($request, $seat) {
+                    // Nếu room_id được gửi trong request thì lấy giá trị đó, nếu không thì lấy room_id hiện tại của ghế
+                    $roomId = $request->room_id ?? $seat->room_id;
+                    return $query->where('room_id', $roomId)->where('is_deleted', false);
+                })->ignore($seat->seat_id, 'seat_id'),  // bỏ qua bản ghi hiện tại theo khóa chính seat_id
+            ],
+            'seat_type' => 'sometimes|in:STANDARD,VIP,COUPLE',
+            'room_id' => 'sometimes|required|string',
+        ], [
+            'seat_number.unique' => 'Số ghế đã tồn tại trong phòng này.',
+        ]);
         $seat->update($request->only(['seat_number', 'seat_type', 'room_id']));
 
         return ApiResponse::success($seat, 'Cập nhật ghế thành công');
@@ -141,61 +142,61 @@ class SeatController extends Controller
     }
 
 
-public function storeMultiple(Request $request)
-{
-    $request->validate([
-        'room_id' => 'required|string',
-        'prefix' => 'required|string|max:5',         // Ví dụ: "D"
-        'start_index' => 'required|integer|min:1',
-        'end_index' => 'required|integer|gte:start_index',
-        'seat_type' => 'in:STANDARD,VIP,COUPLE',
-    ], [
-        'room_id.required' => 'Vui lòng nhập room_id.',
-        'prefix.required' => 'Vui lòng nhập tiền tố tên ghế.',
-        'start_index.required' => 'Vui lòng nhập chỉ số bắt đầu.',
-        'end_index.required' => 'Vui lòng nhập chỉ số kết thúc.',
-        'end_index.gte' => 'Chỉ số kết thúc phải lớn hơn hoặc bằng bắt đầu.',
-    ]);
+    public function storeMultiple(Request $request)
+    {
+        $request->validate([
+            'room_id' => 'required|string',
+            'prefix' => 'required|string|max:5',         // Ví dụ: "D"
+            'start_index' => 'required|integer|min:1',
+            'end_index' => 'required|integer|gte:start_index',
+            'seat_type' => 'in:STANDARD,VIP,COUPLE',
+        ], [
+            'room_id.required' => 'Vui lòng nhập room_id.',
+            'prefix.required' => 'Vui lòng nhập tiền tố tên ghế.',
+            'start_index.required' => 'Vui lòng nhập chỉ số bắt đầu.',
+            'end_index.required' => 'Vui lòng nhập chỉ số kết thúc.',
+            'end_index.gte' => 'Chỉ số kết thúc phải lớn hơn hoặc bằng bắt đầu.',
+        ]);
 
-    $roomId = $request->room_id;
-    $prefix = $request->prefix;
-    $start = $request->start_index;
-    $end = $request->end_index;
-    $seatType = $request->seat_type ?? 'STANDARD';
+        $roomId = $request->room_id;
+        $prefix = $request->prefix;
+        $start = $request->start_index;
+        $end = $request->end_index;
+        $seatType = $request->seat_type ?? 'STANDARD';
 
-    $seats = [];
+        $seats = [];
 
-    for ($i = $start; $i <= $end; $i++) {
-        $seatNumber = $prefix . $i;
+        for ($i = $start; $i <= $end; $i++) {
+            $seatNumber = $prefix . $i;
 
-        // Kiểm tra trùng seat_number trong cùng phòng
-        $exists = Seat::where('room_id', $roomId)
-            ->where('seat_number', $seatNumber)
-            ->where('is_deleted', false)
-            ->exists();
+            // Kiểm tra trùng seat_number trong cùng phòng
+            $exists = Seat::where('room_id', $roomId)
+                ->where('seat_number', $seatNumber)
+                ->where('is_deleted', false)
+                ->exists();
 
-        if ($exists) {
-            continue; // Bỏ qua ghế trùng
+            if ($exists) {
+                continue; // Bỏ qua ghế trùng
+            }
+
+            $seats[] = [
+                'seat_id' => (string) Str::uuid(),
+                'room_id' => $roomId,
+                'seat_number' => $seatNumber,
+                'seat_type' => $seatType,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
         }
 
-        $seats[] = [
-            'seat_id' => (string) Str::uuid(),
-            'room_id' => $roomId,
-            'seat_number' => $seatNumber,
-            'seat_type' => $seatType,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
+        if (count($seats) === 0) {
+            return ApiResponse::error('Tất cả các ghế đều đã tồn tại hoặc không hợp lệ.', 409);
+        }
+
+        // Chèn hàng loạt
+        Seat::insert($seats);
+
+        return ApiResponse::success($seats, 'Tạo ghế hàng loạt thành công', 201);
     }
-
-    if (count($seats) === 0) {
-        return ApiResponse::error('Tất cả các ghế đều đã tồn tại hoặc không hợp lệ.', 409);
-    }
-
-    // Chèn hàng loạt
-    Seat::insert($seats);
-
-    return ApiResponse::success($seats, 'Tạo ghế hàng loạt thành công', 201);
-}
 
 }

@@ -32,7 +32,7 @@ Route::prefix('seats')->group(function () {
     Route::get('/', [SeatController::class, 'index']);
     Route::post('/', [SeatController::class, 'store']);
     Route::get('/{id}', [SeatController::class, 'show']);
-    Route::get('/roomId/{id}', [SeatController::class, 'showSeatByMovieId']);
+    Route::get('/room/{id}/seats', [SeatController::class, 'showSeatByRoomId']);
     Route::put('/{id}', [SeatController::class, 'update']);
     Route::delete('/soft/{id}', [SeatController::class, 'softDelete']);
     Route::patch('/restore/{id}', [SeatController::class, 'restore']);
