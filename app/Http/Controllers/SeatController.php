@@ -27,13 +27,18 @@ class SeatController extends Controller
                 'required',
                 'string',
                 'max:10',
+                'regex:/^[A-Z]{1}[1-9][0-9]*$/',
                 Rule::unique('seat')->where(function ($query) use ($request) {
                     return $query->where('room_id', $request->room_id)->where('is_deleted', false);
                 }),
             ],
             'seat_type' => 'in:STANDARD,VIP,COUPLE',
         ], [
+            'seat_number.required' => 'Vui lòng nhập số ghế.',
+            'seat_number.max' => 'Số ghế không được vượt quá 10 ký tự.',
+            'seat_number.regex' => 'Số ghế phải theo định dạng: một chữ cái in hoa (A-Z) theo sau là số bắt đầu từ 1 (ví dụ: A1, B12).',
             'seat_number.unique' => 'Số ghế đã tồn tại trong phòng này.',
+            'seat_type.in' => 'Loại ghế không hợp lệ (chỉ được STANDARD, VIP, hoặc COUPLE).',
         ]);
 
         $seat = Seat::create([
@@ -45,6 +50,7 @@ class SeatController extends Controller
 
         return ApiResponse::success($seat, 'Tạo ghế thành công', 201);
     }
+
 
     // Lấy thông tin một ghế cụ thể
     public function show($id)
@@ -61,14 +67,17 @@ class SeatController extends Controller
     // Lấy danh sách ghế theo room_id
     public function showSeatByRoomId($id)
     {
-        $seat = Seat::where('room_id', $id)->where('is_deleted', false)->get();
+        $seats = Seat::where('room_id', $id)
+            ->where('is_deleted', false)
+            ->get();
 
-        if (!$seat) {
-            return ApiResponse::error('Seat not found', 404);
+        if ($seats->isEmpty()) {
+            return ApiResponse::error('Không tìm thấy ghế nào trong phòng này', 404);
         }
 
-        return ApiResponse::success($seat, 'Lấy thông tin ghế thành công');
+        return ApiResponse::success($seats, 'Lấy danh sách ghế thành công');
     }
+
 
     // Cập nhật thông tin ghế
     public function update(Request $request, $id)
@@ -76,7 +85,7 @@ class SeatController extends Controller
         $seat = Seat::find($id);
 
         if (!$seat || $seat->is_deleted) {
-            return ApiResponse::error('Seat not found', 404);
+            return ApiResponse::error('Không tìm thấy ghế', 404);
         }
 
         $request->validate([
@@ -85,28 +94,32 @@ class SeatController extends Controller
                 'required',
                 'string',
                 'max:10',
-                Rule::unique('seat')->where(function ($query) use ($request, $seat) {
-                    // Nếu room_id được gửi trong request thì lấy giá trị đó, nếu không thì lấy room_id hiện tại của ghế
-                    $roomId = $request->room_id ?? $seat->room_id;
-                    return $query->where('room_id', $roomId)->where('is_deleted', false);
-                })->ignore($seat->seat_id, 'seat_id'),  // bỏ qua bản ghi hiện tại theo khóa chính seat_id
+                'regex:/^[A-Z]{1}[1-9][0-9]*$/',
+                Rule::unique('seat')->where(function ($query) use ($seat) {
+                    return $query->where('room_id', $seat->room_id)->where('is_deleted', false);
+                })->ignore($seat->seat_id, 'seat_id'),
             ],
             'seat_type' => 'sometimes|in:STANDARD,VIP,COUPLE',
-            'room_id' => 'sometimes|required|string',
         ], [
+            'seat_number.required' => 'Vui lòng nhập số ghế.',
+            'seat_number.max' => 'Số ghế không được vượt quá 10 ký tự.',
+            'seat_number.regex' => 'Số ghế phải theo định dạng: một chữ cái in hoa (A-Z) theo sau là số bắt đầu từ 1 (ví dụ: A1, B12).',
             'seat_number.unique' => 'Số ghế đã tồn tại trong phòng này.',
+            'seat_type.in' => 'Loại ghế không hợp lệ (chỉ được STANDARD, VIP, hoặc COUPLE).',
         ]);
-        $seat->update($request->only(['seat_number', 'seat_type', 'room_id']));
+
+        $seat->update($request->only(['seat_number', 'seat_type']));
 
         return ApiResponse::success($seat, 'Cập nhật ghế thành công');
     }
+
 
     // Xóa mềm
     public function softDelete($id)
     {
         $seat = Seat::find($id);
         if (!$seat || $seat->is_deleted) {
-            return ApiResponse::error('Seat not found or already deleted', 404);
+            return ApiResponse::error('Ghế không tồn tại hoặc đã bị xóa', 404);
         }
 
         $seat->is_deleted = true;
@@ -120,7 +133,7 @@ class SeatController extends Controller
     {
         $seat = Seat::find($id);
         if (!$seat || !$seat->is_deleted) {
-            return ApiResponse::error('Seat not found or not deleted', 404);
+            return ApiResponse::error('Ghế đã được khôi phục', 404);
         }
 
         $seat->is_deleted = false;
@@ -142,17 +155,23 @@ class SeatController extends Controller
     }
 
 
+    // Tạo mới nhiều ghế
     public function storeMultiple(Request $request)
     {
         $request->validate([
             'room_id' => 'required|string',
-            'prefix' => 'required|string|max:5',         // Ví dụ: "D"
+            'prefix' => [
+                'required',
+                'string',
+                'regex:/^[A-Z]{1}$/', // Chỉ cho phép 1 ký tự in hoa duy nhất
+            ],
             'start_index' => 'required|integer|min:1',
             'end_index' => 'required|integer|gte:start_index',
             'seat_type' => 'in:STANDARD,VIP,COUPLE',
         ], [
             'room_id.required' => 'Vui lòng nhập room_id.',
             'prefix.required' => 'Vui lòng nhập tiền tố tên ghế.',
+            'prefix.regex' => 'Tiền tố chỉ được là 1 ký tự in hoa (A-Z).',
             'start_index.required' => 'Vui lòng nhập chỉ số bắt đầu.',
             'end_index.required' => 'Vui lòng nhập chỉ số kết thúc.',
             'end_index.gte' => 'Chỉ số kết thúc phải lớn hơn hoặc bằng bắt đầu.',
@@ -168,6 +187,11 @@ class SeatController extends Controller
 
         for ($i = $start; $i <= $end; $i++) {
             $seatNumber = $prefix . $i;
+
+            // Không cho phép định dạng như A01, AA5, a1,...
+            if (!preg_match('/^[A-Z]{1}[1-9][0-9]*$/', $seatNumber)) {
+                continue; // Bỏ qua ghế không đúng định dạng
+            }
 
             // Kiểm tra trùng seat_number trong cùng phòng
             $exists = Seat::where('room_id', $roomId)
@@ -198,5 +222,6 @@ class SeatController extends Controller
 
         return ApiResponse::success($seats, 'Tạo ghế hàng loạt thành công', 201);
     }
+
 
 }

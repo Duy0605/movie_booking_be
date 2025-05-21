@@ -16,7 +16,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SettingController;
 use Illuminate\Support\Facades\Route;
 
-// Room
+// Room ++
 Route::prefix('rooms')->group(function () {
     Route::get('/search', [RoomController::class, 'searchByRoomName']);                         // Tìm kiếm phòng theo tên
     Route::get('/', [RoomController::class, 'index']);                                          // Lấy danh sách phòng chưa bị xóa
@@ -33,15 +33,15 @@ Route::prefix('rooms')->group(function () {
 
 // Seat
 Route::prefix('seats')->group(function () {
-    Route::get('/', [SeatController::class, 'index']);                                          // Lấy danh sách tất cả ghế
-    Route::post('/', [SeatController::class, 'store']);                                         // Tạo mới ghế
+    Route::post('/', [SeatController::class, 'store']);                                         // Tạo mới 1 ghế
+    Route::post('/batch', [SeatController::class, 'storeMultiple']);                            // Tạo mới nhiều ghế
+    Route::get('/', [SeatController::class, 'index']);                                          // Lấy danh sách tất cả ghế chưa bị xóa
     Route::get('/{id}', [SeatController::class, 'show']);                                       // Lấy thông tin một ghế theo ID
-    Route::get('/room/{id}/seats', [SeatController::class, 'showSeatByRoomId']);                // Lấy danh sách ghế theo ID phòng
+    Route::get('/room/{id}', [SeatController::class, 'showSeatByRoomId']);                      // Lấy danh sách ghế theo ID phòng
     Route::put('/{id}', [SeatController::class, 'update']);                                     // Cập nhật thông tin ghế
     Route::delete('/soft/{id}', [SeatController::class, 'softDelete']);                         // Xóa mềm ghế
     Route::patch('/restore/{id}', [SeatController::class, 'restore']);                          // Khôi phục ghế đã xóa mềm
     Route::delete('/{id}', [SeatController::class, 'destroy']);                                 // Xóa vĩnh viễn ghế
-    Route::post('/batch', [SeatController::class, 'storeMultiple']);                            // Tạo mới nhiều ghế
 });
 
 // Review
