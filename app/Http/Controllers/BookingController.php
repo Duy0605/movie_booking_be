@@ -12,9 +12,9 @@ use App\Response\ApiResponse;
 
 class BookingController extends Controller
 {
-    
-     //Lấy danh sách tất cả booking (chỉ những cái chưa bị xóa mềm)
-    
+
+    //Lấy danh sách tất cả booking (chỉ những cái chưa bị xóa mềm)
+
     public function index(Request $request)
     {
         $perPage = $request->input('per_page', 10);
@@ -25,9 +25,9 @@ class BookingController extends Controller
         return ApiResponse::success($bookings, 'Lấy danh sách booking thành công');
     }
 
-    
-     //Tạo mới một booking và gán ghế (nếu có)
-    
+
+    //Tạo mới một booking và gán ghế (nếu có)
+
     public function store(Request $request)
     {
         $request->validate([
@@ -65,9 +65,9 @@ class BookingController extends Controller
         }
     }
 
-    
+
     // Xem chi tiết một booking theo ID
-    
+
     public function show($id)
     {
         $booking = Booking::with(['user', 'showtime.movie', 'bookingSeats.seat'])->find($id);
@@ -119,9 +119,9 @@ class BookingController extends Controller
         return ApiResponse::success($booking, 'Cập nhật trạng thái thành công');
     }
 
-    
+
     //Cập nhật tổng giá tiền của booking (nếu chưa thanh toán)
-    
+
     public function updateTotalPrice(Request $request, $id)
     {
         $booking = Booking::find($id);
@@ -148,9 +148,28 @@ class BookingController extends Controller
         return ApiResponse::success($booking, 'Cập nhật giá tiền thành công');
     }
 
-    
+    //Tìm kiếm booking theo số điện thoại của người dùng
+    public function searchBookingByPhoneNumber(Request $request)
+    {
+        $request->validate([
+            'phone_number' => 'required|string',
+        ]);
+
+        $query = Booking::with(['user', 'showtime.movie', 'bookingSeats.seat'])
+            ->where('is_deleted', false)
+            ->whereHas('user', function ($q) use ($request) {
+                $q->where('phone', 'LIKE', '%' . $request->phone_number . '%');
+            });
+
+        $perPage = $request->input('per_page', 10);
+        $results = $query->paginate($perPage);
+
+        return ApiResponse::success($results, 'Tìm kiếm booking theo số điện thoại thành công');
+    }
+
+
     //Xóa mềm một booking (chuyển is_deleted = true)
-    
+
     public function destroy($id)
     {
         $booking = Booking::find($id);
@@ -164,9 +183,9 @@ class BookingController extends Controller
         return ApiResponse::success(null, 'Xóa booking thành công');
     }
 
-    
+
     //Khôi phục một booking đã bị xóa mềm
-    
+
     public function restore($id)
     {
         $booking = Booking::where('booking_id', $id)

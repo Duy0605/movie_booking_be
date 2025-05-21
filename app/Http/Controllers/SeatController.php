@@ -78,6 +78,33 @@ class SeatController extends Controller
         return ApiResponse::success($seats, 'Lấy danh sách ghế thành công');
     }
 
+    // Tìm kiếm ghế theo seat_number (gần đúng hoặc chính xác)
+    public function searchSeatsBySeatNumber(Request $request)
+    {
+        $request->validate([
+            'seat_number' => 'required|string',
+            'room_id' => 'sometimes|string', // Tùy chọn lọc theo phòng
+        ], [
+            'seat_number.required' => 'Vui lòng nhập số ghế để tìm kiếm.',
+        ]);
+
+        $query = Seat::where('is_deleted', false)
+            ->where('seat_number', 'like', '%' . $request->seat_number . '%');
+
+        if ($request->has('room_id')) {
+            $query->where('room_id', $request->room_id);
+        }
+
+        $results = $query->get();
+
+        if ($results->isEmpty()) {
+            return ApiResponse::error('Không tìm thấy ghế nào phù hợp.', 404);
+        }
+
+        return ApiResponse::success($results, 'Danh sách ghế tìm được');
+    }
+
+
 
     // Cập nhật thông tin ghế
     public function update(Request $request, $id)

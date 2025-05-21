@@ -13,15 +13,16 @@ class UserAccountController extends Controller
     // Lấy danh sách người dùng (chưa bị xoá)
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 10); // số bản ghi mỗi trang
-        $page = $request->input('page', 1);         // trang hiện tại
+        $perPage = $request->input('per_page', 10); 
+        $page = $request->input('page', 1);         
 
         $users = UserAccount::where('is_deleted', false)
-            ->where('role', 'use') // chỉ lấy người dùng
+            ->where('role', 'USER') 
             ->paginate($perPage, ['*'], 'page', $page);
 
         return ApiResponse::success($users, 'Danh sách người dùng');
     }
+
 
 
     // Lấy thông tin một người dùng theo ID
