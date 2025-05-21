@@ -72,8 +72,6 @@ class RoomController extends Controller
 
 
 
-
-
     // Lấy thông tin một phòng cụ thể
     public function show($id)
     {

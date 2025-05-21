@@ -148,24 +148,28 @@ class BookingController extends Controller
         return ApiResponse::success($booking, 'Cập nhật giá tiền thành công');
     }
 
-    //Tìm kiếm booking theo số điện thoại của người dùng
-    public function searchBookingByPhoneNumber(Request $request)
+    // Tìm kiếm booking theo số điện thoại hoặc tên người dùng
+    public function searchBooking(Request $request)
     {
         $request->validate([
-            'phone_number' => 'required|string',
+            'keyword' => 'required|string',
         ]);
+
+        $keyword = $request->input('keyword');
 
         $query = Booking::with(['user', 'showtime.movie', 'bookingSeats.seat'])
             ->where('is_deleted', false)
-            ->whereHas('user', function ($q) use ($request) {
-                $q->where('phone', 'LIKE', '%' . $request->phone_number . '%');
+            ->whereHas('user', function ($q) use ($keyword) {
+                $q->where('phone', 'LIKE', '%' . $keyword . '%')
+                    ->orWhere('username', 'LIKE', '%' . $keyword . '%');
             });
 
         $perPage = $request->input('per_page', 10);
         $results = $query->paginate($perPage);
 
-        return ApiResponse::success($results, 'Tìm kiếm booking theo số điện thoại thành công');
+        return ApiResponse::success($results, 'Tìm kiếm booking theo số điện thoại hoặc tên người dùng thành công');
     }
+
 
 
     //Xóa mềm một booking (chuyển is_deleted = true)

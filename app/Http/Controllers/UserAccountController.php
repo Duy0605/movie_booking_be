@@ -13,11 +13,11 @@ class UserAccountController extends Controller
     // Lấy danh sách người dùng (chưa bị xoá)
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 10); 
-        $page = $request->input('page', 1);         
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
 
         $users = UserAccount::where('is_deleted', false)
-            ->where('role', 'USER') 
+            ->where('role', 'USER')
             ->paginate($perPage, ['*'], 'page', $page);
 
         return ApiResponse::success($users, 'Danh sách người dùng');
@@ -99,6 +99,30 @@ class UserAccountController extends Controller
 
         return ApiResponse::success($user, 'Cập nhật người dùng thành công');
     }
+
+    // Tìm kiếm người dùng theo tên hoặc số điện thoại
+    public function search(Request $request)
+    {
+        $request->validate([
+            'keyword' => 'required|string',
+        ]);
+
+        $keyword = $request->input('keyword');
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+
+        $users = UserAccount::where('is_deleted', false)
+            ->where('role', 'USER')
+            ->where(function ($query) use ($keyword) {
+                $query->where('username', 'LIKE', "%$keyword%")
+                    ->orWhere('phone', 'LIKE', "%$keyword%");
+            })
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        return ApiResponse::success($users, 'Kết quả tìm kiếm người dùng');
+    }
+
+
 
     // Xoá mềm người dùng
     public function destroy($id)

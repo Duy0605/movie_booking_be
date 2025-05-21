@@ -33,7 +33,6 @@ Route::prefix('rooms')->group(function () {
 
 // Seat
 Route::prefix('seats')->group(function () {
-    Route::get('/search', [SeatController::class, 'searchSeatsBySeatNumber']);                       // Tìm kiếm ghế theo số ghế
     Route::get('/', [SeatController::class, 'index']);                                          // Lấy danh sách tất cả ghế
     Route::post('/', [SeatController::class, 'store']);                                         // Tạo mới ghế
     Route::get('/{id}', [SeatController::class, 'show']);                                       // Lấy thông tin một ghế theo ID
@@ -60,7 +59,7 @@ Route::prefix('reviews')->group(function () {
 
 // Booking ++
 Route::prefix('bookings')->group(function () {
-    Route::get('/search-by-phone', [BookingController::class, 'searchBookingByPhoneNumber']);          // Tìm kiếm booking theo số điện thoại
+    Route::get('/search', [BookingController::class, 'searchBooking']);   // Tìm kiếm booking theo số điện thoại
     Route::get('/', [BookingController::class, 'index']);                                       // Lấy danh sách tất cả booking
     Route::post('/', [BookingController::class, 'store']);                                      // Tạo mới booking
     Route::get('/{id}', [BookingController::class, 'show']);                                    // Lấy thông tin một booking theo ID
@@ -147,6 +146,7 @@ Route::prefix('cinemas')->group(function () {
 
 // User ++
 Route::prefix('users')->group(function () {
+    Route::get('/search', [UserAccountController::class, 'search']);                            // Tìm kiếm người dùng theo tên hoặc số điện thoại
     Route::get('/', [UserAccountController::class, 'index']);                                   // Lấy danh sách người dùng
     Route::post('/', [UserAccountController::class, 'store']);                                  // Tạo người dùng mới
     Route::get('/{id}', [UserAccountController::class, 'show']);                                // Lấy chi tiết thông tin người dùng
@@ -154,6 +154,7 @@ Route::prefix('users')->group(function () {
     Route::delete('/soft/{id}', [UserAccountController::class, 'destroy']);                     // Xoá mềm người dùng
     Route::patch('/restore/{id}', [UserAccountController::class, 'restore']);                   // Khôi phục người dùng
     Route::delete('/{id}', [UserAccountController::class, 'forceDelete']);                      // Xoá vĩnh viễn người dùng
+
 });
 
 // Auth

@@ -224,7 +224,7 @@ class MovieController extends Controller
     }
 
 
-    // Lọc phim theo tên
+    // Tìm kiếm phim theo tên
     public function searchByTitle(Request $request)
     {
         $keyword = $request->query('title');
