@@ -77,9 +77,31 @@ class BookingController extends Controller
         return ApiResponse::success($booking, 'Lấy booking thành công');
     }
 
-    
-     //Cập nhật trạng thái của booking (PENDING, CONFIRMED, CANCELLED)
-    
+    // Lấy danh sách booking theo user_id
+    public function showByUserId(Request $request, $userId)
+    {
+        $perPage = $request->input('per_page', 10); // Số bản ghi/trang, mặc định 10
+
+        $bookings = Booking::with(['user', 'showtime.movie', 'bookingSeats.seat'])
+            ->where('user_id', $userId)
+            ->where('is_deleted', false)
+            ->paginate($perPage);
+
+        if ($bookings->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'No bookings found for this user',
+            ]);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Lấy danh sách booking theo user thành công',
+            'data' => $bookings,
+        ]);
+    }
+
+    // Cập nhật booking (ví dụ đổi trạng thái)
     public function update(Request $request, $id)
     {
         $booking = Booking::find($id);
