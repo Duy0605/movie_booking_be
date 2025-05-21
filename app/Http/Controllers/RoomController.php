@@ -15,11 +15,13 @@ class RoomController extends Controller
     // Lấy danh sách tất cả phòng chưa bị xóa, kèm thông tin cinema
     public function index()
     {
-        $rooms = Room::with(['cinema' => function ($query) {
-            $query->select('cinema_id', 'name')->where('is_deleted', false);
-        }])
-        ->where('is_deleted', false)
-        ->get();
+        $rooms = Room::with([
+            'cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ])
+            ->where('is_deleted', false)
+            ->get();
 
         return ApiResponse::success($rooms, 'Danh sách phòng');
     }
@@ -59,22 +61,30 @@ class RoomController extends Controller
         ]);
 
         // Eager load cinema relationship for the response
-        $room->load(['cinema' => function ($query) {
-            $query->select('cinema_id', 'name')->where('is_deleted', false);
-        }]);
+        $room->load([
+            'cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ]);
 
         return ApiResponse::success($room, 'Tạo phòng thành công', 201);
     }
 
+
+
+
+
     // Lấy thông tin một phòng cụ thể
     public function show($id)
     {
-        $room = Room::with(['cinema' => function ($query) {
-            $query->select('cinema_id', 'name')->where('is_deleted', false);
-        }])
-        ->where('room_id', $id)
-        ->where('is_deleted', false)
-        ->first();
+        $room = Room::with([
+            'cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ])
+            ->where('room_id', $id)
+            ->where('is_deleted', false)
+            ->first();
 
         if (!$room) {
             return ApiResponse::error('Room not found', 404);
@@ -82,6 +92,32 @@ class RoomController extends Controller
 
         return ApiResponse::success($room, 'Room found successfully');
     }
+
+    // Tìm kiếm phòng theo tên
+    public function searchByRoomName(Request $request)
+    {
+        $keyword = $request->input('keyword');
+
+        if (!$keyword) {
+            return ApiResponse::error('Vui lòng nhập từ khóa tìm kiếm', 400);
+        }
+
+        $rooms = Room::with([
+            'cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ])
+            ->where('room_name', 'like', '%' . $keyword . '%')
+            ->where('is_deleted', false)
+            ->get();
+
+        if ($rooms->isEmpty()) {
+            return ApiResponse::success([], 'Không tìm thấy phòng nào phù hợp');
+        }
+
+        return ApiResponse::success($rooms, 'Danh sách phòng tìm thấy');
+    }
+
 
     // Cập nhật thông tin phòng
     public function update(Request $request, $id)
@@ -121,11 +157,13 @@ class RoomController extends Controller
         $room->update($request->only(['cinema_id', 'room_name', 'capacity']));
 
         // Eager load cinema relationship for the response
-        $room->load(['cinema' => function ($query) {
-            $query->select('cinema_id', 'name')->where('is_deleted', false);
-        }]);
+        $room->load([
+            'cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ]);
 
-        return ApiResponse::success($room, 'Room updated successfully');
+        return ApiResponse::success($room, 'Cập nhật phòng thành công');
     }
 
     // Cập nhật dung tích phòng
@@ -133,7 +171,7 @@ class RoomController extends Controller
     {
         $room = Room::find($id);
         if (!$room || $room->is_deleted) {
-            return ApiResponse::error('Room not found', 404);
+            return ApiResponse::error('Không tìm thấy phòng', 404);
         }
 
         $request->validate([
@@ -148,11 +186,13 @@ class RoomController extends Controller
         $room->save();
 
         // Eager load cinema relationship for the response
-        $room->load(['cinema' => function ($query) {
-            $query->select('cinema_id', 'name')->where('is_deleted', false);
-        }]);
+        $room->load([
+            'cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ]);
 
-        return ApiResponse::success($room, 'Room capacity updated successfully');
+        return ApiResponse::success($room, 'Cập nhật dung tích phòng thành công');
     }
 
     // Xóa mềm
@@ -169,23 +209,43 @@ class RoomController extends Controller
         return ApiResponse::success(null, 'Phòng đã được xóa!');
     }
 
+    // Lấy danh sách các phòng đã bị xóa mềm
+    public function getDeletedRooms()
+    {
+        $deletedRooms = Room::with([
+            'cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ])
+            ->where('is_deleted', true)
+            ->get();
+
+        if ($deletedRooms->isEmpty()) {
+            return ApiResponse::success([], 'Không có phòng nào bị xóa mềm');
+        }
+
+        return ApiResponse::success($deletedRooms, 'Danh sách phòng đã bị xóa mềm');
+    }
+
     // Khôi phục lại phòng đã bị xóa mềm
     public function restore($id)
     {
         $room = Room::find($id);
         if (!$room || !$room->is_deleted) {
-            return ApiResponse::error('Room not found or not deleted', 404);
+            return ApiResponse::error('Phòng không tồn tại hoặc đã bị xóa', 404);
         }
 
         $room->is_deleted = false;
         $room->save();
 
         // Eager load cinema relationship for the response
-        $room->load(['cinema' => function ($query) {
-            $query->select('cinema_id', 'name')->where('is_deleted', false);
-        }]);
+        $room->load([
+            'cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ]);
 
-        return ApiResponse::success($room, 'Room restored');
+        return ApiResponse::success($room, 'Phòng đã được khôi phục thành công');
     }
 
     // Xóa vĩnh viễn
@@ -193,11 +253,11 @@ class RoomController extends Controller
     {
         $room = Room::find($id);
         if (!$room) {
-            return ApiResponse::error('Room not found', 404);
+            return ApiResponse::error('Phòng không tồn tại hoặc đã bị xóa', 404);
         }
 
         $room->delete();
-        return ApiResponse::success(null, 'Room permanently deleted');
+        return ApiResponse::success(null, 'Phòng đã được xóa vĩnh viễn');
     }
 
     // Lấy danh sách phòng theo cinema_id
@@ -215,12 +275,14 @@ class RoomController extends Controller
             return ApiResponse::error('Rạp không tồn tại hoặc đã bị xóa', 404);
         }
 
-        $rooms = Room::with(['cinema' => function ($query) {
-            $query->select('cinema_id', 'name')->where('is_deleted', false);
-        }])
-        ->where('cinema_id', $cinema_id)
-        ->where('is_deleted', false)
-        ->paginate($perPage, ['*'], 'page', $page);
+        $rooms = Room::with([
+            'cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ])
+            ->where('cinema_id', $cinema_id)
+            ->where('is_deleted', false)
+            ->paginate($perPage, ['*'], 'page', $page);
 
         return ApiResponse::success($rooms, 'Danh sách phòng theo rạp');
     }
