@@ -88,6 +88,7 @@ Route::prefix('movies')->group(function () {
 
 // ShowTime
 Route::prefix('showtimes')->group(function () {
+    Route::get('/search', [ShowTimeController::class, 'searchShowtimes']);
     Route::get('/', [ShowTimeController::class, 'index']);                                      // Lấy danh sách tất cả lịch chiếu
     Route::post('/', [ShowTimeController::class, 'store']);                                     // Tạo mới lịch chiếu
     Route::get('/{id}', [ShowTimeController::class, 'show']);                                   // Lấy thông tin 1 lịch chiếu theo ID

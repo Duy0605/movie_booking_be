@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\ShowTime;
 use App\Models\Movie;
+use App\Response\ApiResponse;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -244,6 +245,47 @@ class ShowTimeController extends Controller
             ], 404);
         }
     }
+
+    // Tìm kiếm suất chiếu theo tên phim, tên rạp hoặc ngày
+    public function searchShowtimes(Request $request)
+    {
+        $request->validate([
+            'keyword' => 'required|string',
+            'per_page' => 'nullable|integer|min:1',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        $keyword = $request->input('keyword');
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+
+        $query = ShowTime::with([
+            'movie' => function ($q) {
+                $q->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+            },
+            'room.cinema' => function ($q) {
+                $q->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ])
+            ->where('is_deleted', false)
+            ->where(function ($query) use ($keyword) {
+                $query->whereHas('movie', function ($q) use ($keyword) {
+                    $q->where('title', 'LIKE', '%' . $keyword . '%');
+                })->orWhereHas('room.cinema', function ($q) use ($keyword) {
+                    $q->where('name', 'LIKE', '%' . $keyword . '%');
+                })->orWhereDate('start_time', $keyword); // nếu keyword là ngày
+            });
+
+        $results = $query->paginate($perPage, ['*'], 'page', $page);
+
+        if ($results->isEmpty()) {
+            return ApiResponse::error('Không tìm thấy suất chiếu phù hợp', 404);
+        }
+
+        return ApiResponse::success($results, 'Kết quả tìm kiếm suất chiếu');
+    }
+
+
 
     // Xóa suất chiếu (soft delete)
     public function destroy($id)
