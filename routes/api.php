@@ -26,7 +26,7 @@ Route::prefix('rooms')->group(function () {
     Route::get('{id}', [RoomController::class, 'show']);                                        // Lấy thông tin một phòng theo ID
     Route::put('{id}', [RoomController::class, 'update']);                                      // Cập nhật thông tin phòng
     Route::put('update-capacity/{id}', [RoomController::class, 'updateCapacity']);              // Cập nhật sức chứa phòng
-    Route::delete('soft-delete/{id}', [RoomController::class, 'softDelete']);                   // DELETE mềm
+    Route::put('soft-delete/{id}', [RoomController::class, 'softDelete']);                   // DELETE mềm
     Route::patch('restore/{id}', [RoomController::class, 'restore']);                           // Khôi phục phòng bị xóa mềm
     Route::delete('{id}', [RoomController::class, 'destroy']);                                  // DELETE vĩnh viễn
 });

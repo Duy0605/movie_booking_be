@@ -13,15 +13,26 @@ use Illuminate\Validation\Rule;
 class RoomController extends Controller
 {
     // Lấy danh sách tất cả phòng chưa bị xóa, kèm thông tin cinema
-    public function index()
+    public function index(Request $request)
     {
-        $rooms = Room::with([
+        $query = Room::with([
             'cinema' => function ($query) {
                 $query->select('cinema_id', 'name')->where('is_deleted', false);
             }
         ])
-            ->where('is_deleted', false)
-            ->get();
+            ->where('is_deleted', false);
+
+        // Filter by status if provided
+        if ($request->has('status')) {
+            $status = strtoupper($request->input('status'));
+            if (in_array($status, ['AVAILABLE', 'UNAVAILABLE'])) {
+                $query->where('status', $status);
+            } else {
+                return ApiResponse::error('Invalid status value. Must be AVAILABLE or UNAVAILABLE', 400);
+            }
+        }
+
+        $rooms = $query->get();
 
         return ApiResponse::success($rooms, 'Danh sách phòng');
     }
@@ -35,11 +46,8 @@ class RoomController extends Controller
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('room')->where(function ($query) {
-                    return $query->where('is_deleted', false);
-                }),
             ],
-            'capacity' => 'required|integer|min:1',
+            'status' => 'sometimes|in:AVAILABLE,UNAVAILABLE',
         ], [
             'cinema_id.required' => 'Vui lòng nhập cinema_id.',
             'cinema_id.string' => 'cinema_id phải là chuỗi.',
@@ -48,16 +56,14 @@ class RoomController extends Controller
             'room_name.string' => 'Tên phòng phải là chuỗi.',
             'room_name.max' => 'Tên phòng không được vượt quá 100 ký tự.',
             'room_name.unique' => 'Tên phòng đã tồn tại.',
-            'capacity.required' => 'Vui lòng nhập sức chứa phòng.',
-            'capacity.integer' => 'Sức chứa phòng phải là số nguyên.',
-            'capacity.min' => 'Sức chứa phòng phải lớn hơn 0.',
+            'status.in' => 'Trạng thái phải là AVAILABLE hoặc UNAVAILABLE.',
         ]);
 
         $room = Room::create([
             'room_id' => (string) Str::uuid(),
             'cinema_id' => $request->cinema_id,
             'room_name' => $request->room_name,
-            'capacity' => $request->capacity,
+            'status' => $request->input('status', 'AVAILABLE'), // Default to AVAILABLE
         ]);
 
         // Eager load cinema relationship for the response
@@ -69,8 +75,6 @@ class RoomController extends Controller
 
         return ApiResponse::success($room, 'Tạo phòng thành công', 201);
     }
-
-
 
     // Lấy thông tin một phòng cụ thể
     public function show($id)
@@ -116,12 +120,10 @@ class RoomController extends Controller
         return ApiResponse::success($rooms, 'Danh sách phòng tìm thấy');
     }
 
-
+    
     // Cập nhật thông tin phòng
     public function update(Request $request, $id)
     {
-        Log::info("PUT /api/rooms/{$id} - Bắt đầu cập nhật phòng");
-
         $room = Room::find($id);
 
         if (!$room || $room->is_deleted) {
@@ -129,30 +131,21 @@ class RoomController extends Controller
         }
 
         $request->validate([
-            'cinema_id' => 'required|string|exists:cinema,cinema_id',
             'room_name' => [
-                'required',
+                'sometimes',
                 'string',
                 'max:100',
-                Rule::unique('room', 'room_name')
-                    ->ignore($room->room_id, 'room_id')
-                    ->where('is_deleted', false),
             ],
-            'capacity' => 'required|integer|min:1',
+            'status' => 'sometimes|in:AVAILABLE,UNAVAILABLE',
         ], [
-            'cinema_id.required' => 'Vui lòng nhập cinema_id.',
-            'cinema_id.string' => 'cinema_id phải là chuỗi.',
-            'cinema_id.exists' => 'Rạp không tồn tại.',
             'room_name.required' => 'Vui lòng nhập tên phòng.',
             'room_name.string' => 'Tên phòng phải là chuỗi.',
             'room_name.max' => 'Tên phòng không được vượt quá 100 ký tự.',
             'room_name.unique' => 'Tên phòng đã tồn tại.',
-            'capacity.required' => 'Vui lòng nhập sức chứa phòng.',
-            'capacity.integer' => 'Sức chứa phòng phải là số nguyên.',
-            'capacity.min' => 'Sức chứa phòng phải lớn hơn 0.',
+            'status.in' => 'Trạng thái phải là AVAILABLE hoặc UNAVAILABLE.',
         ]);
 
-        $room->update($request->only(['cinema_id', 'room_name', 'capacity']));
+        $room->update($request->only(['room_name', 'status']));
 
         // Eager load cinema relationship for the response
         $room->load([
@@ -163,6 +156,7 @@ class RoomController extends Controller
 
         return ApiResponse::success($room, 'Cập nhật phòng thành công');
     }
+
 
     // Cập nhật dung tích phòng
     public function updateCapacity(Request $request, $id)
@@ -273,14 +267,25 @@ class RoomController extends Controller
             return ApiResponse::error('Rạp không tồn tại hoặc đã bị xóa', 404);
         }
 
-        $rooms = Room::with([
+        $query = Room::with([
             'cinema' => function ($query) {
                 $query->select('cinema_id', 'name')->where('is_deleted', false);
             }
         ])
             ->where('cinema_id', $cinema_id)
-            ->where('is_deleted', false)
-            ->paginate($perPage, ['*'], 'page', $page);
+            ->where('is_deleted', false);
+
+        // Filter by status if provided
+        if ($request->has('status')) {
+            $status = strtoupper($request->input('status'));
+            if (in_array($status, ['AVAILABLE', 'UNAVAILABLE'])) {
+                $query->where('status', $status);
+            } else {
+                return ApiResponse::error('Invalid status value. Must be AVAILABLE or UNAVAILABLE', 400);
+            }
+        }
+
+        $rooms = $query->paginate($perPage, ['*'], 'page', $page);
 
         return ApiResponse::success($rooms, 'Danh sách phòng theo rạp');
     }

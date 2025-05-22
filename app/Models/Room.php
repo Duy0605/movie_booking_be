@@ -13,7 +13,7 @@ class Room extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'room_id', 'cinema_id', 'room_name', 'capacity', 'is_deleted'
+        'room_id', 'cinema_id', 'room_name','status', 'capacity', 'is_deleted'
     ];
 
     // Define the relationship to the Cinema model
