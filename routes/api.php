@@ -12,10 +12,15 @@ use App\Http\Controllers\BookingSeatController;
 use App\Http\Controllers\CinemaController;
 use App\Http\Controllers\UserAccountController;
 use App\Http\Controllers\AuthController;
-
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SettingController;
 use Illuminate\Support\Facades\Route;
 
+
+// Dashboard
+Route::prefix('dashboard')->group(function () {
+    Route::get('/', [DashboardController::class, 'getDashboardData']); // Lấy dữ liệu cho Admin Dashboard
+});
 // Room ++
 Route::prefix('rooms')->group(function () {
     Route::get('/search', [RoomController::class, 'searchByRoomName']);                         // Tìm kiếm phòng theo tên
@@ -84,11 +89,13 @@ Route::prefix('movies')->group(function () {
     Route::get('/movies/search', [MovieController::class, 'searchByTitle']);                    // Tìm kiếm phim theo tiêu đề
     Route::get('/movies/now-showing', [MovieController::class, 'getNowShowing']);               // Lấy danh sách phim đang chiếu
     Route::get('/movies/upcoming-movie', [MovieController::class, 'getUpcomingMovie']);         // Lấy danh sách phim sắp chiếu
+    Route::get('/movies/get-all-movies', [MovieController::class, 'getAllMovies']);
+    Route::get('/movies/search-movies', [MovieController::class, 'searchByTitleFE']);
 });
 
 // ShowTime
 Route::prefix('showtimes')->group(function () {
-    Route::get('/search', [ShowTimeController::class, 'searchShowtimes']);
+    Route::get('/search', [ShowTimeController::class, 'searchShowtimes']); 
     Route::get('/', [ShowTimeController::class, 'index']);                                      // Lấy danh sách tất cả lịch chiếu
     Route::post('/', [ShowTimeController::class, 'store']);                                     // Tạo mới lịch chiếu
     Route::get('/{id}', [ShowTimeController::class, 'show']);                                   // Lấy thông tin 1 lịch chiếu theo ID
@@ -172,3 +179,4 @@ Route::prefix('setting')->group(function () {
     Route::get('/', [SettingController::class, 'show']);                                 // Lấy thông tin cài đặt
     Route::put('/', [SettingController::class, 'update']);                               // Cập nhật cài đặt
 });
+

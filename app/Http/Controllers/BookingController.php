@@ -5,29 +5,24 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Booking;
 use App\Models\Payment;
-
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use App\Response\ApiResponse;
 
 class BookingController extends Controller
 {
-
-    //Lấy danh sách tất cả booking (chỉ những cái chưa bị xóa mềm)
-
+    // Lấy danh sách tất cả booking (chỉ những cái chưa bị xóa mềm)
     public function index(Request $request)
     {
         $perPage = $request->input('per_page', 10);
-        $bookings = Booking::with(['user', 'showtime.movie', 'bookingSeats'])
+        $bookings = Booking::with(['user', 'showtime.movie', 'showtime.room', 'bookingSeats.seat'])
             ->where('is_deleted', false)
             ->paginate($perPage);
 
         return ApiResponse::success($bookings, 'Lấy danh sách booking thành công');
     }
 
-
-    //Tạo mới một booking và gán ghế (nếu có)
-
+    // Tạo mới một booking và gán ghế (nếu có)
     public function store(Request $request)
     {
         $request->validate([
@@ -65,12 +60,11 @@ class BookingController extends Controller
         }
     }
 
-
     // Xem chi tiết một booking theo ID
-
     public function show($id)
     {
-        $booking = Booking::with(['user', 'showtime.movie', 'bookingSeats.seat'])->find($id);
+        $booking = Booking::with(['user', 'showtime.movie', 'showtime.room', 'bookingSeats.seat'])
+            ->find($id);
         if (!$booking) {
             return ApiResponse::error('Booking không tồn tại', 404);
         }
@@ -80,9 +74,9 @@ class BookingController extends Controller
     // Lấy danh sách booking theo user_id
     public function showByUserId(Request $request, $userId)
     {
-        $perPage = $request->input('per_page', 10); // Số bản ghi/trang, mặc định 10
+        $perPage = $request->input('per_page', 10);
 
-        $bookings = Booking::with(['user', 'showtime.movie', 'bookingSeats.seat'])
+        $bookings = Booking::with(['user', 'showtime.movie', 'showtime.room', 'bookingSeats.seat'])
             ->where('user_id', $userId)
             ->where('is_deleted', false)
             ->paginate($perPage);
@@ -119,16 +113,13 @@ class BookingController extends Controller
         return ApiResponse::success($booking, 'Cập nhật trạng thái thành công');
     }
 
-
-    //Cập nhật tổng giá tiền của booking (nếu chưa thanh toán)
-
+    // Cập nhật tổng giá tiền của booking (nếu chưa thanh toán)
     public function updateTotalPrice(Request $request, $id)
     {
         $booking = Booking::find($id);
         if (!$booking) {
             return ApiResponse::error('Booking không tồn tại', 404);
         }
-
 
         $hasCompletedPayment = Payment::where('booking_id', $booking->booking_id)
             ->where('payment_status', 'COMPLETED')
@@ -157,7 +148,7 @@ class BookingController extends Controller
 
         $keyword = $request->input('keyword');
 
-        $query = Booking::with(['user', 'showtime.movie', 'bookingSeats.seat'])
+        $query = Booking::with(['user', 'showtime.movie', 'showtime.room', 'bookingSeats.seat'])
             ->where('is_deleted', false)
             ->whereHas('user', function ($q) use ($keyword) {
                 $q->where('phone', 'LIKE', '%' . $keyword . '%')
@@ -170,10 +161,7 @@ class BookingController extends Controller
         return ApiResponse::success($results, 'Tìm kiếm booking theo số điện thoại hoặc tên người dùng thành công');
     }
 
-
-
-    //Xóa mềm một booking (chuyển is_deleted = true)
-
+    // Xóa mềm một booking (chuyển is_deleted = true)
     public function destroy($id)
     {
         $booking = Booking::find($id);
@@ -187,9 +175,7 @@ class BookingController extends Controller
         return ApiResponse::success(null, 'Xóa booking thành công');
     }
 
-
-    //Khôi phục một booking đã bị xóa mềm
-
+    // Khôi phục một booking đã bị xóa mềm
     public function restore($id)
     {
         $booking = Booking::where('booking_id', $id)

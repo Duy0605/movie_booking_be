@@ -225,6 +225,7 @@ class MovieController extends Controller
 
 
     // Tìm kiếm phim theo tên
+    // Tìm kiếm phim theo tên
     public function searchByTitle(Request $request)
     {
         $keyword = $request->query('title');
@@ -247,36 +248,246 @@ class MovieController extends Controller
             'data' => $movies
         ]);
     }
+    
 
     // Lấy danh sách phim đang chiếu
     public function getNowShowing(Request $request)
     {
         $perPage = $request->input('per_page', 10);
+        $currentDate = Carbon::today();
 
         $movies = Movie::where('is_deleted', false)
-            ->where('release_date', '<=', now())
+            ->where('release_date', '<=', $currentDate)
+            ->whereHas('showtimes', function ($query) use ($currentDate) {
+                $query->where('is_deleted', false)
+                      ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate]);
+            })
+            ->with(['showtimes' => function ($query) use ($currentDate) {
+                $query->where('is_deleted', false)
+                      ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate])
+                      ->select('showtime_id', 'movie_id', 'start_time');
+            }, 'showtimes.room.cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }])
+            ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage);
+
+        // Transform the response to include cinema and showtime information
+        $movies->getCollection()->transform(function ($movie) {
+            $cinemas = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'cinema_id' => $showtime->room->cinema->cinema_id ?? null,
+                    'name' => $showtime->room->cinema->name ?? null,
+                ];
+            })->filter()->unique('cinema_id')->values();
+
+            $showtimes = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'showtime_id' => $showtime->showtime_id,
+                    'start_time' => $showtime->start_time->toIso8601String(),
+                ];
+            });
+
+            return [
+                'movie_id' => $movie->movie_id,
+                'title' => $movie->title,
+                'description' => $movie->description,
+                'duration' => $movie->duration,
+                'release_date' => $movie->release_date,
+                'director' => $movie->director,
+                'cast' => $movie->cast,
+                'genre' => $movie->genre,
+                'rating' => $movie->rating,
+                'poster_url' => $movie->poster_url,
+                'is_deleted' => $movie->is_deleted,
+                'cinemas' => $cinemas,
+                'showtimes' => $showtimes,
+            ];
+        });
 
         return response()->json([
             'code' => 200,
             'message' => 'Lấy danh sách phim đang chiếu thành công',
             'data' => $movies
-        ]);
+        ], 200);
     }
-
 
     // Lấy danh sách phim sắp chiếu
     public function getUpcomingMovie(Request $request)
     {
         $perPage = $request->input('per_page', 10);
+        $currentDate = Carbon::today();
 
         $movies = Movie::where('is_deleted', false)
-            ->where('release_date', '>', now())
+            ->where('release_date', '>', $currentDate)
+            ->whereHas('showtimes', function ($query) use ($currentDate) {
+                $query->where('is_deleted', false)
+                      ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) < ?', [$currentDate]);
+            })
+            ->with(['showtimes' => function ($query) use ($currentDate) {
+                $query->where('is_deleted', false)
+                      ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) < ?', [$currentDate])
+                      ->select('showtime_id', 'movie_id', 'start_time');
+            }, 'showtimes.room.cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }])
+            ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage);
+
+        // Transform the response to include cinema and showtime information
+        $movies->getCollection()->transform(function ($movie) {
+            $cinemas = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'cinema_id' => $showtime->room->cinema->cinema_id ?? null,
+                    'name' => $showtime->room->cinema->name ?? null,
+                ];
+            })->filter()->unique('cinema_id')->values();
+
+            $showtimes = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'showtime_id' => $showtime->showtime_id,
+                    'start_time' => $showtime->start_time->toIso8601String(),
+                ];
+            });
+
+            return [
+                'movie_id' => $movie->movie_id,
+                'title' => $movie->title,
+                'description' => $movie->description,
+                'duration' => $movie->duration,
+                'release_date' => $movie->release_date,
+                'director' => $movie->director,
+                'cast' => $movie->cast,
+                'genre' => $movie->genre,
+                'rating' => $movie->rating,
+                'poster_url' => $movie->poster_url,
+                'is_deleted' => $movie->is_deleted,
+                'cinemas' => $cinemas,
+                'showtimes' => $showtimes,
+            ];
+        });
 
         return response()->json([
             'code' => 200,
             'message' => 'Lấy danh sách phim sắp chiếu thành công',
+            'data' => $movies
+        ], 200);
+    }
+
+    // Method for getAllMovies (if needed, same as index but renamed for clarity)
+    public function getAllMovies(Request $request)
+    {
+        $perPage = $request->query('per_page', 10);
+        $page = $request->query('page', 1);
+
+        $movies = Movie::where('is_deleted', false)
+            ->whereHas('showtimes', function ($query) {
+                $query->where('is_deleted', false);
+            })
+            ->with(['showtimes.room.cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }])
+            ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        // Transform the response to include cinema and showtime information
+        $movies->getCollection()->transform(function ($movie) {
+            $cinemas = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'cinema_id' => $showtime->room->cinema->cinema_id ?? null,
+                    'name' => $showtime->room->cinema->name ?? null,
+                ];
+            })->filter()->unique('cinema_id')->values();
+
+            $showtimes = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'showtime_id' => $showtime->showtime_id,
+                    'start_time' => $showtime->start_time->toIso8601String(),
+                ];
+            });
+
+            return [
+                'movie_id' => $movie->movie_id,
+                'title' => $movie->title,
+                'description' => $movie->description,
+                'duration' => $movie->duration,
+                'release_date' => $movie->release_date,
+                'director' => $movie->director,
+                'cast' => $movie->cast,
+                'genre' => $movie->genre,
+                'rating' => $movie->rating,
+                'poster_url' => $movie->poster_url,
+                'is_deleted' => $movie->is_deleted,
+                'cinemas' => $cinemas,
+                'showtimes' => $showtimes,
+            ];
+        });
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Lấy danh sách phim thành công',
+            'data' => $movies,
+        ], 200);
+    }
+
+    public function searchByTitleFE(Request $request)
+    {
+        $keyword = $request->query('title');
+        $perPage = $request->input('per_page', 10);
+
+        if (!$keyword) {
+            return response()->json([
+                'code' => 400,
+                'message' => 'Thiếu tham số tìm kiếm tên phim'
+            ]);
+        }
+
+        $movies = Movie::where('is_deleted', false)
+            ->where('title', 'like', '%' . $keyword . '%')
+            ->whereHas('showtimes', function ($query) {
+                $query->where('is_deleted', false);
+            })
+            ->with(['showtimes.room.cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }])
+            ->paginate($perPage);
+
+        // Transform the response to include cinema information
+        $movies->getCollection()->transform(function ($movie) {
+            $cinemas = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'cinema_id' => $showtime->room->cinema->cinema_id ?? null,
+                    'name' => $showtime->room->cinema->name ?? null,
+                ];
+            })->filter()->unique('cinema_id')->values();
+
+            $showtimes = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'showtime_id' => $showtime->showtime_id,
+                    'start_time' => $showtime->start_time->toIso8601String(),
+                ];
+            });
+
+            return [
+                'movie_id' => $movie->movie_id,
+                'title' => $movie->title,
+                'description' => $movie->description,
+                'duration' => $movie->duration,
+                'release_date' => $movie->release_date,
+                'director' => $movie->director,
+                'cast' => $movie->cast,
+                'genre' => $movie->genre,
+                'rating' => $movie->rating,
+                'poster_url' => $movie->poster_url,
+                'is_deleted' => $movie->is_deleted,
+                'cinemas' => $cinemas,
+                'showtimes' => $showtimes,
+            ];
+        });
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Tìm kiếm phim theo tên thành công',
             'data' => $movies
         ]);
     }

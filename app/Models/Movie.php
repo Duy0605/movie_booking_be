@@ -24,7 +24,6 @@ class Movie extends Model
         'is_deleted'
     ];
 
-    // Nếu muốn dùng soft delete qua cột is_deleted
     protected $casts = [
         'is_deleted' => 'boolean'
     ];
@@ -33,6 +32,13 @@ class Movie extends Model
     public function bookings()
     {
         return $this->hasMany(Booking::class, 'movie_id', 'movie_id')
+            ->where('is_deleted', false);
+    }
+
+    // Quan hệ với showtime (1 movie có nhiều showtime)
+    public function showtimes()
+    {
+        return $this->hasMany(ShowTime::class, 'movie_id', 'movie_id')
             ->where('is_deleted', false);
     }
 }
