@@ -96,6 +96,63 @@ class CouponController extends Controller
         return response()->json(['code' => 200, 'message' => 'Cập nhật coupon thành công', 'data' => $coupon]);
     }
 
+    // Lấy danh sách coupon đã bị xóa mềm (is_active = false)
+    public function getDeletedCoupons(Request $request)
+    {
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+
+        $coupons = Coupon::where('is_active', false)
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        if ($coupons->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Không có coupon nào bị vô hiệu hóa.',
+            ]);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Danh sách coupon đã bị xóa mềm',
+            'data' => $coupons,
+        ]);
+    }
+
+
+    // Tìm kiếm coupon theo code
+    public function searchCouponByCode(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string',
+            'per_page' => 'sometimes|integer|min:1',
+            'page' => 'sometimes|integer|min:1',
+        ], [
+            'code.required' => 'Vui lòng nhập mã coupon để tìm kiếm.',
+        ]);
+
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+        $searchCode = $request->input('code');
+
+        $coupons = Coupon::where('code', 'like', '%' . $searchCode . '%')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        if ($coupons->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Không tìm thấy coupon với mã đã nhập.',
+            ]);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Danh sách coupon theo mã tìm kiếm',
+            'data' => $coupons,
+        ]);
+    }
+
+
     // Xóa mềm coupon
     public function softDelete($id)
     {

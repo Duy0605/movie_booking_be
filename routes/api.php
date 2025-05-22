@@ -125,9 +125,11 @@ Route::prefix('booking-seats')->group(function () {
 
 // Coupon ++
 Route::prefix('coupons')->group(function () {
+    Route::get('/search', [CouponController::class, 'searchCouponByCode']);                      // Tìm kiếm mã giảm giá theo mã
     Route::get('/', [CouponController::class, 'index']);                                         // Lấy danh sách tất cả mã giảm giá
     Route::post('/', [CouponController::class, 'store']);                                        // Tạo mới mã giảm giá
     Route::get('/{id}', [CouponController::class, 'show']);                                      // Lấy thông tin một mã giảm giá theo ID
+    Route::get('/deleted', [CouponController::class, 'getDeletedCoupons']);                      // Lấy danh sách mã giảm giá đã xóa mềm
     Route::put('/{id}', [CouponController::class, 'update']);                                    // Cập nhật mã giảm giá
     Route::delete('/soft/{id}', [CouponController::class, 'softDelete']);                        // soft delete
     Route::delete('/{id}', [CouponController::class, 'forceDelete']);                            // xóa cứng
