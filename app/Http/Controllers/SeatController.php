@@ -32,13 +32,13 @@ class SeatController extends Controller
                     return $query->where('room_id', $request->room_id)->where('is_deleted', false);
                 }),
             ],
-            'seat_type' => 'in:STANDARD,VIP,COUPLE',
+            'seat_type' => 'in:STANDARD,VIP,COUPLE,UNAVAILABLE',
         ], [
             'seat_number.required' => 'Vui lòng nhập số ghế.',
             'seat_number.max' => 'Số ghế không được vượt quá 10 ký tự.',
             'seat_number.regex' => 'Số ghế phải theo định dạng: một chữ cái in hoa (A-Z) theo sau là số bắt đầu từ 1 (ví dụ: A1, B12).',
             'seat_number.unique' => 'Số ghế đã tồn tại trong phòng này.',
-            'seat_type.in' => 'Loại ghế không hợp lệ (chỉ được STANDARD, VIP, hoặc COUPLE).',
+            'seat_type.in' => 'Loại ghế không hợp lệ (chỉ được STANDARD, VIP, COUPLE, hoặc UNAVAILABLE).',
         ]);
 
         $seat = Seat::create([
@@ -99,13 +99,13 @@ class SeatController extends Controller
                     return $query->where('room_id', $seat->room_id)->where('is_deleted', false);
                 })->ignore($seat->seat_id, 'seat_id'),
             ],
-            'seat_type' => 'sometimes|in:STANDARD,VIP,COUPLE',
+            'seat_type' => 'sometimes|in:STANDARD,VIP,COUPLE,UNAVAILABLE',
         ], [
             'seat_number.required' => 'Vui lòng nhập số ghế.',
             'seat_number.max' => 'Số ghế không được vượt quá 10 ký tự.',
             'seat_number.regex' => 'Số ghế phải theo định dạng: một chữ cái in hoa (A-Z) theo sau là số bắt đầu từ 1 (ví dụ: A1, B12).',
             'seat_number.unique' => 'Số ghế đã tồn tại trong phòng này.',
-            'seat_type.in' => 'Loại ghế không hợp lệ (chỉ được STANDARD, VIP, hoặc COUPLE).',
+            'seat_type.in' => 'Loại ghế không hợp lệ (chỉ được STANDARD, VIP, COUPLE, hoặc UNAVAILABLE).',
         ]);
 
         $seat->update($request->only(['seat_number', 'seat_type']));
@@ -222,6 +222,4 @@ class SeatController extends Controller
 
         return ApiResponse::success($seats, 'Tạo ghế hàng loạt thành công', 201);
     }
-
-
 }
