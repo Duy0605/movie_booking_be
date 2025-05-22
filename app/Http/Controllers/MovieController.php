@@ -8,7 +8,7 @@ use App\Models\Movie;
 use App\Models\UserAccount;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-
+use Carbon\Carbon; // Added import
 use Illuminate\Support\Facades\Mail;
 
 
