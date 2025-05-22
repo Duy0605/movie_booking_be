@@ -248,7 +248,7 @@ class MovieController extends Controller
             'data' => $movies
         ]);
     }
-    
+
 
     // Lấy danh sách phim đang chiếu
     public function getNowShowing(Request $request)
@@ -260,15 +260,19 @@ class MovieController extends Controller
             ->where('release_date', '<=', $currentDate)
             ->whereHas('showtimes', function ($query) use ($currentDate) {
                 $query->where('is_deleted', false)
-                      ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate]);
+                    ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate]);
             })
-            ->with(['showtimes' => function ($query) use ($currentDate) {
-                $query->where('is_deleted', false)
-                      ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate])
-                      ->select('showtime_id', 'movie_id', 'start_time');
-            }, 'showtimes.room.cinema' => function ($query) {
-                $query->select('cinema_id', 'name')->where('is_deleted', false);
-            }])
+            ->with([
+                'showtimes' => function ($query) use ($currentDate) {
+                    $query->where('is_deleted', false)
+                        ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate])
+                        ->select('showtime_id', 'movie_id', 'start_time', 'room_id'); // ✅ Thêm 'room_id'
+                },
+                'showtimes.room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ])
+
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage);
 
@@ -322,15 +326,19 @@ class MovieController extends Controller
             ->where('release_date', '>', $currentDate)
             ->whereHas('showtimes', function ($query) use ($currentDate) {
                 $query->where('is_deleted', false)
-                      ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) < ?', [$currentDate]);
+                    ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) < ?', [$currentDate]);
             })
-            ->with(['showtimes' => function ($query) use ($currentDate) {
-                $query->where('is_deleted', false)
-                      ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) < ?', [$currentDate])
-                      ->select('showtime_id', 'movie_id', 'start_time');
-            }, 'showtimes.room.cinema' => function ($query) {
-                $query->select('cinema_id', 'name')->where('is_deleted', false);
-            }])
+            ->with([
+                'showtimes' => function ($query) use ($currentDate) {
+                    $query->where('is_deleted', false)
+                        ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate])
+                        ->select('showtime_id', 'movie_id', 'start_time', 'room_id'); // ✅ Thêm 'room_id'
+                },
+                'showtimes.room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ])
+
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage);
 
@@ -384,9 +392,11 @@ class MovieController extends Controller
             ->whereHas('showtimes', function ($query) {
                 $query->where('is_deleted', false);
             })
-            ->with(['showtimes.room.cinema' => function ($query) {
-                $query->select('cinema_id', 'name')->where('is_deleted', false);
-            }])
+            ->with([
+                'showtimes.room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ])
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage, ['*'], 'page', $page);
 
@@ -447,9 +457,11 @@ class MovieController extends Controller
             ->whereHas('showtimes', function ($query) {
                 $query->where('is_deleted', false);
             })
-            ->with(['showtimes.room.cinema' => function ($query) {
-                $query->select('cinema_id', 'name')->where('is_deleted', false);
-            }])
+            ->with([
+                'showtimes.room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ])
             ->paginate($perPage);
 
         // Transform the response to include cinema information
