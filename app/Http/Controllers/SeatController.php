@@ -41,6 +41,21 @@ class SeatController extends Controller
             'seat_type.in' => 'Loại ghế không hợp lệ (chỉ được STANDARD, VIP, COUPLE, hoặc UNAVAILABLE).',
         ]);
 
+        // Kiểm tra xem ghế đã tồn tại với is_deleted=1
+        $existingSeat = Seat::where('room_id', $request->room_id)
+            ->where('seat_number', $request->seat_number)
+            ->where('is_deleted', true)
+            ->first();
+
+        if ($existingSeat) {
+            // Khôi phục ghế đã bị xóa mềm
+            $existingSeat->is_deleted = false;
+            $existingSeat->seat_type = $request->seat_type ?? 'STANDARD';
+            $existingSeat->save();
+            return ApiResponse::success($existingSeat, 'Khôi phục ghế thành công', 200);
+        }
+
+        // Tạo ghế mới nếu không tìm thấy ghế đã xóa
         $seat = Seat::create([
             'seat_id' => (string) Str::uuid(),
             'room_id' => $request->room_id,
@@ -50,7 +65,6 @@ class SeatController extends Controller
 
         return ApiResponse::success($seat, 'Tạo ghế thành công', 201);
     }
-
 
     // Lấy thông tin một ghế cụ thể
     public function show($id)
@@ -77,7 +91,6 @@ class SeatController extends Controller
 
         return ApiResponse::success($seats, 'Lấy danh sách ghế thành công');
     }
-
 
     // Cập nhật thông tin ghế
     public function update(Request $request, $id)
@@ -112,7 +125,6 @@ class SeatController extends Controller
 
         return ApiResponse::success($seat, 'Cập nhật ghế thành công');
     }
-
 
     // Xóa mềm
     public function softDelete($id)
@@ -154,7 +166,6 @@ class SeatController extends Controller
         return ApiResponse::success(null, 'Ghế đã bị xóa vĩnh viễn');
     }
 
-
     // Tạo mới nhiều ghế
     public function storeMultiple(Request $request)
     {
@@ -183,7 +194,8 @@ class SeatController extends Controller
         $end = $request->end_index;
         $seatType = $request->seat_type ?? 'STANDARD';
 
-        $seats = [];
+        $seatsToCreate = [];
+        $seatsToRestore = [];
 
         for ($i = $start; $i <= $end; $i++) {
             $seatNumber = $prefix . $i;
@@ -193,17 +205,21 @@ class SeatController extends Controller
                 continue; // Bỏ qua ghế không đúng định dạng
             }
 
-            // Kiểm tra trùng seat_number trong cùng phòng
-            $exists = Seat::where('room_id', $roomId)
+            // Kiểm tra ghế đã tồn tại
+            $existingSeat = Seat::where('room_id', $roomId)
                 ->where('seat_number', $seatNumber)
-                ->where('is_deleted', false)
-                ->exists();
+                ->first();
 
-            if ($exists) {
-                continue; // Bỏ qua ghế trùng
+            if ($existingSeat) {
+                if ($existingSeat->is_deleted) {
+                    // Thêm vào danh sách ghế cần khôi phục
+                    $seatsToRestore[] = $existingSeat;
+                }
+                continue; // Bỏ qua ghế đã tồn tại (bao gồm cả ghế không bị xóa)
             }
 
-            $seats[] = [
+            // Thêm vào danh sách ghế cần tạo mới
+            $seatsToCreate[] = [
                 'seat_id' => (string) Str::uuid(),
                 'room_id' => $roomId,
                 'seat_number' => $seatNumber,
@@ -213,13 +229,89 @@ class SeatController extends Controller
             ];
         }
 
-        if (count($seats) === 0) {
+        // Khôi phục các ghế đã bị xóa mềm
+        foreach ($seatsToRestore as $seat) {
+            $seat->is_deleted = false;
+            $seat->seat_type = $seatType;
+            $seat->save();
+        }
+
+        // Tạo mới các ghế
+        if (!empty($seatsToCreate)) {
+            Seat::insert($seatsToCreate);
+        }
+
+        $totalProcessed = count($seatsToCreate) + count($seatsToRestore);
+
+        if ($totalProcessed === 0) {
             return ApiResponse::error('Tất cả các ghế đều đã tồn tại hoặc không hợp lệ.', 409);
         }
 
-        // Chèn hàng loạt
-        Seat::insert($seats);
+        // Convert merged array to collection
+        $processedSeats = collect(array_merge(
+            $seatsToCreate,
+            array_map(function ($seat) { return $seat->toArray(); }, $seatsToRestore)
+        ));
+        return ApiResponse::success($processedSeats, 'Xử lý ghế hàng loạt thành công (' . count($seatsToRestore) . ' khôi phục, ' . count($seatsToCreate) . ' tạo mới)', 201);
+    }
 
-        return ApiResponse::success($seats, 'Tạo ghế hàng loạt thành công', 201);
+    // Xóa mềm nhiều ghế
+    public function softDeleteMultiple(Request $request)
+    {
+        $request->validate([
+            'room_id' => 'required|string',
+            'prefix' => [
+                'required',
+                'string',
+                'regex:/^[A-Z]{1}$/', // Chỉ cho phép 1 ký tự in hoa duy nhất
+            ],
+            'start_index' => 'required|integer|min:1',
+            'end_index' => 'required|integer|gte:start_index',
+        ], [
+            'room_id.required' => 'Vui lòng nhập room_id.',
+            'prefix.required' => 'Vui lòng nhập tiền tố tên ghế.',
+            'prefix.regex' => 'Tiền tố chỉ được là 1 ký tự in hoa (A-Z).',
+            'start_index.required' => 'Vui lòng nhập chỉ số bắt đầu.',
+            'end_index.required' => 'Vui lòng nhập chỉ số kết thúc.',
+            'end_index.gte' => 'Chỉ số kết thúc phải lớn hơn hoặc bằng bắt đầu.',
+        ]);
+
+        $roomId = $request->room_id;
+        $prefix = $request->prefix;
+        $start = $request->start_index;
+        $end = $request->end_index;
+
+        $seatsToDelete = [];
+
+        for ($i = $start; $i <= $end; $i++) {
+            $seatNumber = $prefix . $i;
+
+            // Không cho phép định dạng như A01, AA5, a1,...
+            if (!preg_match('/^[A-Z]{1}[1-9][0-9]*$/', $seatNumber)) {
+                continue; // Bỏ qua ghế không đúng định dạng
+            }
+
+            // Tìm ghế trong phòng với seat_number
+            $seat = Seat::where('room_id', $roomId)
+                ->where('seat_number', $seatNumber)
+                ->where('is_deleted', false)
+                ->first();
+
+            if ($seat) {
+                $seatsToDelete[] = $seat;
+            }
+        }
+
+        if (empty($seatsToDelete)) {
+            return ApiResponse::error('Không tìm thấy ghế nào để xóa mềm.', 404);
+        }
+
+        // Thực hiện xóa mềm
+        foreach ($seatsToDelete as $seat) {
+            $seat->is_deleted = true;
+            $seat->save();
+        }
+
+        return ApiResponse::success($seatsToDelete, 'Xóa mềm ' . count($seatsToDelete) . ' ghế thành công');
     }
 }

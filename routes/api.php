@@ -42,7 +42,7 @@ Route::prefix('seats')->group(function () {
     Route::patch('/restore/{id}', [SeatController::class, 'restore']);                          // Khôi phục ghế đã xóa mềm
     Route::delete('/{id}', [SeatController::class, 'destroy']);                                 // Xóa vĩnh viễn ghế
     Route::post('/batch', [SeatController::class, 'storeMultiple']);                            // Tạo mới nhiều ghế
-
+    Route::post('/softDeleteMultipe', [SeatController::class, 'softDeleteMultiple']);           // Xóa mềm nhiều ghế                              // Tạo mới ghế
 });
 
 // Review
