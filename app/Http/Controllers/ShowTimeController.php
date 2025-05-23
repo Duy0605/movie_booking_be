@@ -35,6 +35,50 @@ class ShowTimeController extends Controller
         ]);
     }
 
+    // Lọc suất chiếu theo rạp và ngày
+    public function filterByCinemaAndDate($cinema_id, $date, Request $request)
+    {
+        $request->merge(['cinema_id' => $cinema_id, 'date' => $date]);
+
+        $request->validate([
+            'cinema_id' => 'required|string|exists:cinema,cinema_id',
+            'date' => 'required|date_format:Y-m-d',
+            'per_page' => 'nullable|integer|min:1',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+
+        $query = ShowTime::with([
+            'movie' => function ($query) {
+                $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+            },
+            'room.cinema' => function ($query) {
+                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            }
+        ])
+            ->where('is_deleted', false)
+            ->whereHas('room', function ($query) use ($cinema_id) {
+                $query->where('cinema_id', $cinema_id)->where('is_deleted', false);
+            })
+            ->whereDate('start_time', Carbon::parse($date)->toDateString());
+
+        $showtimes = $query->paginate($perPage, ['*'], 'page', $page);
+
+        if ($showtimes->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Không tìm thấy suất chiếu cho rạp và ngày này'
+            ], 404);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Lấy danh sách suất chiếu theo rạp và ngày thành công',
+            'data' => $showtimes
+        ]);
+    }
 
     // Tạo mới suất chiếu
     public function store(Request $request)
@@ -89,7 +133,6 @@ class ShowTimeController extends Controller
             'price' => $request->price,
             'is_deleted' => false,
         ]);
-
 
         $showtime->load([
             'movie' => function ($query) {
@@ -166,7 +209,6 @@ class ShowTimeController extends Controller
             'data' => $showtimes
         ]);
     }
-
 
     // Cập nhật thông tin suất chiếu
     public function update(Request $request, $id)
@@ -285,8 +327,6 @@ class ShowTimeController extends Controller
         return ApiResponse::success($results, 'Kết quả tìm kiếm suất chiếu');
     }
 
-
-
     // Xóa suất chiếu (soft delete)
     public function destroy($id)
     {
@@ -343,5 +383,4 @@ class ShowTimeController extends Controller
             ], 404);
         }
     }
-
 }

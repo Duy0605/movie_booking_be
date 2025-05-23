@@ -103,6 +103,7 @@ Route::prefix('showtimes')->group(function () {
     Route::delete('/soft/{id}', [ShowTimeController::class, 'destroy']);                        // Xóa mềm lịch chiếu
     Route::patch('/restore/{id}', [ShowTimeController::class, 'restore']);                      // Khôi phục lịch chiếu
     Route::get('/movieId/{id}', [ShowTimeController::class, 'showByMovieId']);                  // Lấy danh sách lịch chiếu theo ID phim
+    Route::get('/cinema/{cinema_id}/date/{date}', [ShowTimeController::class, 'filterByCinemaAndDate']);
 });
 
 // Payment
