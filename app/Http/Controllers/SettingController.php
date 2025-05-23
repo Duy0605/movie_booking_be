@@ -1,4 +1,4 @@
-<?php 
+<?php
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
@@ -39,7 +39,17 @@ class SettingController extends Controller
             ], 404);
         }
 
-        $setting->update($request->only(['name', 'vip', 'couple', 'banner']));
+        // Validate the request data
+        $validated = $request->validate([
+            'name' => 'required|string|url',
+            'vip' => 'required|numeric|min:0|max:100',
+            'couple' => 'required|numeric|min:100|max:200',
+            'banner' => 'required|array',
+            'banner.*' => 'string|url|regex:/^https:\/\/res\.cloudinary\.com/', // Ensure each URL is a valid Cloudinary URL
+        ]);
+
+        // Update the setting with the validated data
+        $setting->update($validated);
 
         return response()->json([
             'code' => 200,

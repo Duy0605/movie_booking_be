@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Jobs\CancelSingleBooking; // Add this import
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use App\Response\ApiResponse;
@@ -52,6 +53,10 @@ class BookingController extends Controller
                 }
             }
 
+            // Dispatch the CancelSingleBooking job with a 5-minute delay for this specific booking
+            CancelSingleBooking::dispatch($booking->booking_id)
+                ->delay(now()->addMinutes(5));
+
             DB::commit();
             return ApiResponse::success($booking, 'Tạo booking thành công', 201);
         } catch (\Exception $e) {
@@ -74,11 +79,12 @@ class BookingController extends Controller
     // Lấy danh sách booking theo user_id
     public function showByUserId(Request $request, $userId)
     {
-        $perPage = $request->input('per_page', 10);
+        $perPage = $request->input('per_page', 10); 
 
         $bookings = Booking::with(['user', 'showtime.movie', 'showtime.room', 'bookingSeats.seat'])
             ->where('user_id', $userId)
             ->where('is_deleted', false)
+            ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
         if ($bookings->isEmpty()) {
@@ -137,6 +143,32 @@ class BookingController extends Controller
         $booking->save();
 
         return ApiResponse::success($booking, 'Cập nhật giá tiền thành công');
+    }
+
+    // Cập nhật orderCode của booking (nếu chưa thanh toán)
+    public function updateOrderCode(Request $request, $id)
+    {
+        $booking = Booking::find($id);
+        if (!$booking) {
+            return ApiResponse::error('Booking không tồn tại', 404);
+        }
+
+        $hasCompletedPayment = Payment::where('booking_id', $booking->booking_id)
+            ->where('payment_status', 'COMPLETED')
+            ->exists();
+
+        if ($hasCompletedPayment) {
+            return ApiResponse::error('Booking đã thanh toán, không thể cập nhật orderCode', 403);
+        }
+
+        $request->validate([
+            'order_code' => 'required|string|max:255',
+        ]);
+
+        $booking->order_code = $request->order_code;
+        $booking->save();
+
+        return ApiResponse::success($booking, 'Cập nhật orderCode thành công');
     }
 
     // Tìm kiếm booking theo số điện thoại hoặc tên người dùng

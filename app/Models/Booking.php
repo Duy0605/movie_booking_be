@@ -16,6 +16,7 @@ class Booking extends Model
         'showtime_id',
         'total_price',
         'status',
+        'order_code',
         'is_deleted',
     ];
 

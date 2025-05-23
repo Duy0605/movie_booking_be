@@ -23,5 +23,6 @@ class Setting extends Model
         'vip' => 'double',
         'couple' => 'double',
         'is_deleted' => 'boolean',
+        'banner' => 'array', 
     ];
 }

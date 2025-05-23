@@ -179,10 +179,12 @@ class ShowTimeController extends Controller
         }
     }
 
-    // Lấy danh sách suất chiếu theo movie
     public function showByMovieId(Request $request, $id)
     {
         $perPage = $request->input('per_page', 10);
+
+        $futureTime = Carbon::now()->addMinutes(30); 
+        $maxTime = Carbon::now()->addDays(7); 
 
         $showtimes = ShowTime::with([
             'movie' => function ($query) {
@@ -194,6 +196,8 @@ class ShowTimeController extends Controller
         ])
             ->where('movie_id', $id)
             ->where('is_deleted', false)
+            ->where('start_time', '>=', $futureTime)
+            ->where('start_time', '<=', $maxTime) 
             ->paginate($perPage);
 
         if ($showtimes->isEmpty()) {

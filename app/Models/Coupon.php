@@ -13,9 +13,12 @@ class Coupon extends Model
     protected $fillable = [
         'coupon_id',
         'code',
+        'description',
         'discount',
         'expiry_date',
         'is_active',
+        'is_used', 
+        'quantity',
     ];
 
     protected $casts = [
