@@ -79,7 +79,7 @@ class BookingController extends Controller
     // Lấy danh sách booking theo user_id
     public function showByUserId(Request $request, $userId)
     {
-        $perPage = $request->input('per_page', 10); 
+        $perPage = $request->input('per_page', 10);
 
         $bookings = Booking::with(['user', 'showtime.movie', 'showtime.room', 'bookingSeats.seat'])
             ->where('user_id', $userId)

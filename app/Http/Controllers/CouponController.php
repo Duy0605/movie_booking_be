@@ -192,7 +192,7 @@ class CouponController extends Controller
         return response()->json([
             'code' => 200,
             'message' => 'Danh sách coupon theo mã tìm kiếm',
-            'data' => $coupons,
+            'data' => $coupon,
         ]);
     }
 

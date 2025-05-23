@@ -442,18 +442,14 @@ class MovieController extends Controller
 
     public function searchByTitleFE(Request $request)
     {
-        $keyword = $request->query('title');
-        $perPage = $request->input('per_page', 10);
+        // Lấy tham số từ query string
+        $title = $request->query('title', ''); // Chuỗi tìm kiếm tiêu đề
+        $perPage = $request->query('per_page', 10); // Số bản ghi mỗi trang
+        $page = $request->query('page', 1); // Trang hiện tại
 
-        if (!$keyword) {
-            return response()->json([
-                'code' => 400,
-                'message' => 'Thiếu tham số tìm kiếm tên phim'
-            ]);
-        }
-
+        // Xây dựng query tìm kiếm
         $movies = Movie::where('is_deleted', false)
-            ->where('title', 'like', '%' . $keyword . '%')
+            ->where('title', 'LIKE', '%' . $title . '%') // Tìm kiếm tiêu đề không phân biệt hoa thường
             ->whereHas('showtimes', function ($query) {
                 $query->where('is_deleted', false);
             })
@@ -462,9 +458,10 @@ class MovieController extends Controller
                     $query->select('cinema_id', 'name')->where('is_deleted', false);
                 }
             ])
-            ->paginate($perPage);
+            ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
+            ->paginate($perPage, ['*'], 'page', $page);
 
-        // Transform the response to include cinema information
+        // Transform dữ liệu để định dạng phản hồi
         $movies->getCollection()->transform(function ($movie) {
             $cinemas = $movie->showtimes->map(function ($showtime) {
                 return [
@@ -497,10 +494,11 @@ class MovieController extends Controller
             ];
         });
 
+        // Trả về phản hồi JSON
         return response()->json([
             'code' => 200,
-            'message' => 'Tìm kiếm phim theo tên thành công',
-            'data' => $movies
-        ]);
+            'message' => 'Tìm kiếm phim theo tiêu đề thành công',
+            'data' => $movies,
+        ], 200);
     }
 }
