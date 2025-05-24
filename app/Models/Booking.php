@@ -14,6 +14,7 @@ class Booking extends Model
         'booking_id',
         'user_id',
         'showtime_id',
+        'coupon_id', 
         'total_price',
         'status',
         'order_code',
@@ -28,6 +29,11 @@ class Booking extends Model
     public function showtime()
     {
         return $this->belongsTo(ShowTime::class, 'showtime_id', 'showtime_id');
+    }
+
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class, 'coupon_id');
     }
 
     // Lấy movie thông qua showtime

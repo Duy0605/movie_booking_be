@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Models\Coupon;
 use App\Jobs\CancelSingleBooking; // Add this import
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use App\Response\ApiResponse;
+use Carbon\Carbon;
 
 class BookingController extends Controller
 {
@@ -170,6 +172,48 @@ class BookingController extends Controller
 
         return ApiResponse::success($booking, 'Cập nhật orderCode thành công');
     }
+
+    public function updateCoupon(Request $request, $booking_id)
+{
+    $request->validate([
+        'coupon_code' => 'nullable|string|exists:coupon,code', // Fixed table name to 'coupons'
+    ]);
+
+    // Find the booking
+    $booking = Booking::where('booking_id', $booking_id)
+        ->where('is_deleted', false)
+        ->first();
+
+    if (!$booking) {
+        return ApiResponse::error('Booking not found', 404);
+    }
+
+    // Check if the booking is in PENDING status
+    if ($booking->status !== 'PENDING') {
+        return ApiResponse::error('Cannot update coupon: Booking is not in PENDING status', 400);
+    }
+
+    $coupon = null;
+    $couponCode = $request->input('coupon_code');
+
+    if ($couponCode) {
+        $coupon = Coupon::where('code', $couponCode)
+            ->where('is_active', true)
+            ->whereColumn('is_used', '<', 'quantity')
+            ->where('expiry_date', '>=', Carbon::now())
+            ->first();
+
+        if (!$coupon) {
+            return ApiResponse::error('Invalid or unusable coupon', 400);
+        }
+    }
+
+    // Update the coupon_id
+    $booking->coupon_id = $coupon ? $coupon->coupon_id : null;
+    $booking->save();
+
+    return ApiResponse::success($booking, 'Coupon updated successfully');
+}
 
     // Tìm kiếm booking theo số điện thoại hoặc tên người dùng
     public function searchBooking(Request $request)

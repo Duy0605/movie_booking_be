@@ -117,7 +117,6 @@ class CouponController extends Controller
     }
 
     // Lấy danh sách coupon đã bị xóa mềm (is_active = false)
-    // Lấy danh sách coupon đã bị xóa mềm (is_active = false)
     public function getDeletedCoupons(Request $request)
     {
         $perPage = $request->input('per_page', 10);
@@ -194,6 +193,46 @@ class CouponController extends Controller
             'message' => 'Danh sách coupon theo mã tìm kiếm',
             'data' => $coupon,
         ]);
+    }
+
+    public function updateUsage(Request $request, $coupon_id)
+    {
+        // Validate the request
+        $request->validate([
+            'action' => 'required|string|in:increment,decrement',
+        ]);
+
+        // Find the coupon
+        $coupon = Coupon::find($coupon_id);
+        if (!$coupon) {
+            return ApiResponse::error('Coupon not found', 404);
+        }
+
+        // Check if the coupon is active
+        if (!$coupon->is_active) {
+            return ApiResponse::error('Cannot update usage: Coupon is not active', 400);
+        }
+
+        $action = $request->input('action');
+
+        if ($action === 'increment') {
+            // Check if usage limit is reached
+            if ($coupon->is_used >= $coupon->quantity) {
+                return ApiResponse::error('Cannot increment usage: Coupon has reached its usage limit', 400);
+            }
+            $coupon->is_used += 1;
+        } elseif ($action === 'decrement') {
+            // Check if usage can be decremented
+            if ($coupon->is_used <= 0) {
+                return ApiResponse::error('Cannot decrement usage: Coupon usage is already 0', 400);
+            }
+            $coupon->is_used -= 1;
+        }
+
+        // Save the updated coupon
+        $coupon->save();
+
+        return ApiResponse::success($coupon, 'Coupon usage updated successfully');
     }
 
     // Xóa mềm coupon

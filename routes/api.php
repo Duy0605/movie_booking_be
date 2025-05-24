@@ -70,8 +70,10 @@ Route::prefix('bookings')->group(function () {
 
     Route::get('/{id}', [BookingController::class, 'show']);           // GET /api/bookings/{id}
     Route::get('/userId/{id}', [BookingController::class, 'showByUserId']);
+    Route::get('/search', [BookingController::class, 'searchBooking']);    
     Route::put('/{id}', [BookingController::class, 'update']);         // PUT /api/bookings/{id}
     Route::put('/{id}/order-code', [BookingController::class, 'updateOrderCode']); // Update order code
+    Route::put('/{booking_id}/coupon', [BookingController::class, 'updateCoupon']);
     Route::delete('/soft/{id}', [BookingController::class, 'destroy']); // Xóa mềm booking
     Route::patch('/restore/{id}', [BookingController::class, 'restore']); // Khôi phục booking
     Route::delete('/{id}', [BookingController::class, 'forceDelete']); // Xóa vĩnh viễn booking
@@ -144,6 +146,8 @@ Route::prefix('coupons')->group(function () {
     Route::delete('/{id}', [CouponController::class, 'forceDelete']);                            // xóa cứng
     Route::patch('/restore/{id}', [CouponController::class, 'restore']);                         // khôi phục xóa mềm
     // Route::get('/search/code', [CouponController::class, 'searchByCode']);
+    Route::post('{coupon_id}/usage', [CouponController::class, 'updateUsage']);
+    Route::get('/search/code', [CouponController::class, 'searchCouponByCode']);
     Route::get('/search/exact-code', [CouponController::class, 'searchByExactCode']);
 });
 
