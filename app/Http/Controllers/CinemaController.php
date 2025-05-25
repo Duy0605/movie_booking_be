@@ -121,7 +121,7 @@ class CinemaController extends Controller
         return ApiResponse::success($cinema, 'Cập nhật rạp chiếu phim thành công');
     }
 
-    // Tìm kiếm rạp theo địa chỉ (không dùng ApiResponse)
+    // Tìm kiếm rạp theo địa chỉ
     public function searchCinemaByAddress(Request $request)
     {
         $request->validate([
@@ -153,6 +153,37 @@ class CinemaController extends Controller
         ], 200);
     }
 
+    // Tìm kiếm rạp theo tên rạp
+    public function searchCinemaByName(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'per_page' => 'sometimes|integer|min:1',
+            'page' => 'sometimes|integer|min:1',
+        ], [
+            'name.required' => 'Vui lòng nhập tên rạp để tìm kiếm.',
+        ]);
+
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+
+        $results = Cinema::where('is_deleted', false)
+            ->where('name', 'like', '%' . $request->name . '%')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        if ($results->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy rạp chiếu phim phù hợp với tên.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Danh sách rạp chiếu phim theo tên',
+            'data' => $results
+        ], 200);
+    }
 
     // Xóa mềm rạp
     public function destroy($id)

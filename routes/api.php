@@ -153,7 +153,8 @@ Route::prefix('coupons')->group(function () {
 
 // Cinema
 Route::prefix('cinemas')->group(function () {
-    Route::get('/search', [CinemaController::class, 'searchCinemaByAddress']);                  // Tìm kiếm rạp theo địa chỉ
+    Route::get('/search-by-address', [CinemaController::class, 'searchCinemaByAddress']);                  // Tìm kiếm rạp theo địa chỉ
+    Route::get('/search-by-name', [CinemaController::class, 'searchCinemaByName']);             // Tìm kiếm rạp theo tên
     Route::get('/deleted', [CinemaController::class, 'getDeleted']);                            // Lấy danh sách rạp đã xóa mềm
     Route::get('/', [CinemaController::class, 'index']);                                        // Lấy danh sách tất cả rạp chiếu
     Route::post('/', [CinemaController::class, 'store']);                                       // Thêm rạp mới
