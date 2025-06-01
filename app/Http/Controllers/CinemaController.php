@@ -185,6 +185,70 @@ class CinemaController extends Controller
         ], 200);
     }
 
+    // Tìm kiếm rạp đã xóa theo tên
+    public function searchDeletedCinemaByName(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'per_page' => 'sometimes|integer|min:1',
+            'page' => 'sometimes|integer|min:1',
+        ], [
+            'name.required' => 'Vui lòng nhập tên rạp để tìm kiếm.',
+        ]);
+
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+
+        $results = Cinema::where('is_deleted', true)
+            ->where('name', 'like', '%' . $request->name . '%')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        if ($results->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy rạp chiếu phim đã xóa phù hợp với tên.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Danh sách rạp chiếu phim đã xóa theo tên',
+            'data' => $results
+        ], 200);
+    }
+
+    // Tìm kiếm rạp đã xóa theo địa chỉ
+    public function searchDeletedCinemaByAddress(Request $request)
+    {
+        $request->validate([
+            'address' => 'required|string',
+            'per_page' => 'sometimes|integer|min:1',
+            'page' => 'sometimes|integer|min:1',
+        ], [
+            'address.required' => 'Vui lòng nhập địa chỉ để tìm kiếm.',
+        ]);
+
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+
+        $results = Cinema::where('is_deleted', true)
+            ->where('address', 'like', '%' . $request->address . '%')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        if ($results->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy rạp chiếu phim đã xóa phù hợp với địa chỉ.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Danh sách rạp chiếu phim đã xóa theo địa chỉ',
+            'data' => $results
+        ], 200);
+    }
+
     // Xóa mềm rạp
     public function destroy($id)
     {

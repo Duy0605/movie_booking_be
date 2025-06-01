@@ -8,11 +8,8 @@ use App\Models\Movie;
 use App\Models\UserAccount;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Carbon\Carbon; // Added import
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
-
-
-
 
 class MovieController extends Controller
 {
@@ -28,7 +25,6 @@ class MovieController extends Controller
             'data' => $movies
         ]);
     }
-
 
     // Tạo mới phim
     public function store(Request $request)
@@ -70,11 +66,12 @@ class MovieController extends Controller
             'poster_url' => $request->poster_url,
             'is_deleted' => false,
         ]);
+
         // Gửi email cho tất cả user có email
         $users = UserAccount::whereNotNull('email')->get();
         foreach ($users as $user) {
             Mail::to($user->email)->queue(new NewMovieMail(
-                $user->full_name,                  // customer_name
+                $user->full_name,
                 $movie->title,
                 $movie->description,
                 $movie->release_date,
@@ -83,8 +80,6 @@ class MovieController extends Controller
                 $movie->movie_id
             ));
         }
-
-
 
         return response()->json([
             'code' => 201,
@@ -187,6 +182,7 @@ class MovieController extends Controller
             ]);
         }
     }
+
     // Khôi phục phim đã xóa mềm
     public function restore($id)
     {
@@ -210,6 +206,7 @@ class MovieController extends Controller
             ]);
         }
     }
+
     // Lấy danh sách phim đã bị xóa mềm
     public function getDeletedMovies(Request $request)
     {
@@ -223,8 +220,6 @@ class MovieController extends Controller
         ]);
     }
 
-
-    // Tìm kiếm phim theo tên
     // Tìm kiếm phim theo tên
     public function searchByTitle(Request $request)
     {
@@ -249,6 +244,71 @@ class MovieController extends Controller
         ]);
     }
 
+    // Tìm kiếm phim đã xóa theo tên
+    public function searchDeletedMoviesByTitle(Request $request)
+    {
+        $title = $request->query('title', '');
+        $perPage = $request->query('per_page', 10);
+        $page = $request->query('page', 1);
+
+        if (!$title) {
+            return response()->json([
+                'code' => 400,
+                'message' => 'Thiếu tham số tìm kiếm tên phim'
+            ], 400);
+        }
+
+        $movies = Movie::where('is_deleted', true)
+            ->where('title', 'LIKE', '%' . $title . '%')
+            ->whereHas('showtimes', function ($query) {
+                $query->where('is_deleted', false);
+            })
+            ->with([
+                'showtimes.room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ])
+            ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $movies->getCollection()->transform(function ($movie) {
+            $cinemas = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'cinema_id' => $showtime->room->cinema->cinema_id ?? null,
+                    'name' => $showtime->room->cinema->name ?? null,
+                ];
+            })->filter()->unique('cinema_id')->values();
+
+            $showtimes = $movie->showtimes->map(function ($showtime) {
+                return [
+                    'showtime_id' => $showtime->showtime_id,
+                    'start_time' => $showtime->start_time->toIso8601String(),
+                ];
+            });
+
+            return [
+                'movie_id' => $movie->movie_id,
+                'title' => $movie->title,
+                'description' => $movie->description,
+                'duration' => $movie->duration,
+                'release_date' => $movie->release_date,
+                'director' => $movie->director,
+                'cast' => $movie->cast,
+                'genre' => $movie->genre,
+                'rating' => $movie->rating,
+                'poster_url' => $movie->poster_url,
+                'is_deleted' => $movie->is_deleted,
+                'cinemas' => $cinemas,
+                'showtimes' => $showtimes,
+            ];
+        });
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Tìm kiếm phim đã xóa theo tiêu đề thành công',
+            'data' => $movies,
+        ], 200);
+    }
 
     // Lấy danh sách phim đang chiếu
     public function getNowShowing(Request $request)
@@ -266,17 +326,15 @@ class MovieController extends Controller
                 'showtimes' => function ($query) use ($currentDate) {
                     $query->where('is_deleted', false)
                         ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate])
-                        ->select('showtime_id', 'movie_id', 'start_time', 'room_id'); // ✅ Thêm 'room_id'
+                        ->select('showtime_id', 'movie_id', 'start_time', 'room_id');
                 },
                 'showtimes.room.cinema' => function ($query) {
                     $query->select('cinema_id', 'name')->where('is_deleted', false);
                 }
             ])
-
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage);
 
-        // Transform the response to include cinema and showtime information
         $movies->getCollection()->transform(function ($movie) {
             $cinemas = $movie->showtimes->map(function ($showtime) {
                 return [
@@ -326,23 +384,21 @@ class MovieController extends Controller
             ->where('release_date', '>', $currentDate)
             ->whereHas('showtimes', function ($query) use ($currentDate) {
                 $query->where('is_deleted', false)
-                    ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) < ?', [$currentDate]);
+                    ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate]);
             })
             ->with([
                 'showtimes' => function ($query) use ($currentDate) {
                     $query->where('is_deleted', false)
                         ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate])
-                        ->select('showtime_id', 'movie_id', 'start_time', 'room_id'); // ✅ Thêm 'room_id'
+                        ->select('showtime_id', 'movie_id', 'start_time', 'room_id');
                 },
                 'showtimes.room.cinema' => function ($query) {
                     $query->select('cinema_id', 'name')->where('is_deleted', false);
                 }
             ])
-
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage);
 
-        // Transform the response to include cinema and showtime information
         $movies->getCollection()->transform(function ($movie) {
             $cinemas = $movie->showtimes->map(function ($showtime) {
                 return [
@@ -382,7 +438,7 @@ class MovieController extends Controller
         ], 200);
     }
 
-    // Method for getAllMovies (if needed, same as index but renamed for clarity)
+    // Lấy danh sách tất cả phim (bao gồm thông tin rạp và lịch chiếu)
     public function getAllMovies(Request $request)
     {
         $perPage = $request->query('per_page', 10);
@@ -400,7 +456,6 @@ class MovieController extends Controller
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage, ['*'], 'page', $page);
 
-        // Transform the response to include cinema and showtime information
         $movies->getCollection()->transform(function ($movie) {
             $cinemas = $movie->showtimes->map(function ($showtime) {
                 return [
@@ -440,16 +495,15 @@ class MovieController extends Controller
         ], 200);
     }
 
+    // Tìm kiếm phim theo tên (FE)
     public function searchByTitleFE(Request $request)
     {
-        // Lấy tham số từ query string
-        $title = $request->query('title', ''); // Chuỗi tìm kiếm tiêu đề
-        $perPage = $request->query('per_page', 10); // Số bản ghi mỗi trang
-        $page = $request->query('page', 1); // Trang hiện tại
+        $title = $request->query('title', '');
+        $perPage = $request->query('per_page', 10);
+        $page = $request->query('page', 1);
 
-        // Xây dựng query tìm kiếm
         $movies = Movie::where('is_deleted', false)
-            ->where('title', 'LIKE', '%' . $title . '%') // Tìm kiếm tiêu đề không phân biệt hoa thường
+            ->where('title', 'LIKE', '%' . $title . '%')
             ->whereHas('showtimes', function ($query) {
                 $query->where('is_deleted', false);
             })
@@ -461,7 +515,6 @@ class MovieController extends Controller
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage, ['*'], 'page', $page);
 
-        // Transform dữ liệu để định dạng phản hồi
         $movies->getCollection()->transform(function ($movie) {
             $cinemas = $movie->showtimes->map(function ($showtime) {
                 return [
@@ -494,7 +547,6 @@ class MovieController extends Controller
             ];
         });
 
-        // Trả về phản hồi JSON
         return response()->json([
             'code' => 200,
             'message' => 'Tìm kiếm phim theo tiêu đề thành công',

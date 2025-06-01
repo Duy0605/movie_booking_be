@@ -79,18 +79,19 @@ Route::prefix('bookings')->group(function () {
 
 // Movie
 Route::prefix('movies')->group(function () {
-    Route::get('/', [MovieController::class, 'index']);                                         // Lấy danh sách tất cả phim
-    Route::post('/', [MovieController::class, 'store']);                                        // Tạo mới phim
-    Route::get('/{id}', [MovieController::class, 'show']);                                      // Lấy thông tin 1 phim theo ID
-    Route::put('/{id}', [MovieController::class, 'update']);                                    // Cập nhật phim
-    Route::delete('/soft/{id}', [MovieController::class, 'destroy']);                           // Xóa mềm phim
-    Route::patch('/restore/{id}', [MovieController::class, 'restore']);                         // Khôi phục phim đã bị xóa mềm
-    Route::get('/movies/deleted', [MovieController::class, 'getDeletedMovies']);                // Lấy danh sách phim đã xóa mềm
-    Route::get('/movies/search', [MovieController::class, 'searchByTitle']);                    // Tìm kiếm phim theo tiêu đề
-    Route::get('/movies/now-showing', [MovieController::class, 'getNowShowing']);               // Lấy danh sách phim đang chiếu
-    Route::get('/movies/upcoming-movie', [MovieController::class, 'getUpcomingMovie']);         // Lấy danh sách phim sắp chiếu
-    Route::get('/movies/get-all-movies', [MovieController::class, 'getAllMovies']);             // Lấy danh sách tất cả phim (bao gồm đã xóa mềm)
-    Route::get('/movies/search-movies', [MovieController::class, 'searchByTitleFE']);           // Tìm kiếm phim theo tiêu đề (frontend)
+    Route::get('/', [MovieController::class, 'index']);
+    Route::post('/', [MovieController::class, 'store']);
+    Route::get('/deleted', [MovieController::class, 'getDeletedMovies']);
+    Route::get('/{id}', [MovieController::class, 'show']);
+    Route::put('/{id}', [MovieController::class, 'update']);
+    Route::delete('/{id}', [MovieController::class, 'destroy']);
+    Route::put('/restore/{id}', [MovieController::class, 'restore']);
+    Route::get('/deleted/search', [MovieController::class, 'searchDeletedMoviesByTitle']);
+    Route::get('/search-by-title', [MovieController::class, 'searchByTitle']);
+    Route::get('/now-showing', [MovieController::class, 'getNowShowing']);
+    Route::get('/upcoming', [MovieController::class, 'getUpcomingMovie']);
+    Route::get('/get-all', [MovieController::class, 'getAllMovies']);
+    Route::get('/search', [MovieController::class, 'searchByTitleFE']);
 });
 
 // ShowTime
@@ -146,17 +147,19 @@ Route::prefix('coupons')->group(function () {
     Route::get('/search/exact-code', [CouponController::class, 'searchByExactCode']);            // Tìm kiếm mã giảm giá theo mã chính xác
 });
 
-// Cinema
+//Cinema
 Route::prefix('cinemas')->group(function () {
-    Route::get('/search-by-address', [CinemaController::class, 'searchCinemaByAddress']);        // Tìm kiếm rạp theo địa chỉ
-    Route::get('/search-by-name', [CinemaController::class, 'searchCinemaByName']);             // Tìm kiếm rạp theo tên
-    Route::get('/deleted', [CinemaController::class, 'getDeleted']);                            // Lấy danh sách rạp đã xóa mềm
-    Route::get('/', [CinemaController::class, 'index']);                                        // Lấy danh sách tất cả rạp chiếu
-    Route::post('/', [CinemaController::class, 'store']);                                       // Thêm rạp mới
-    Route::get('/{id}', [CinemaController::class, 'show']);                                     // Lấy thông tin 1 rạp theo ID
-    Route::put('/{id}', [CinemaController::class, 'update']);                                   // Cập nhật rạp
-    Route::delete('/{id}', [CinemaController::class, 'destroy']);                               // Xoá mềm rạp
-    Route::put('/restore/{id}', [CinemaController::class, 'restore']);                          // Khôi phục rạp
+    Route::get('/search-by-address', [CinemaController::class, 'searchCinemaByAddress']);                  // Tìm kiếm rạp theo địa chỉ
+    Route::get('/search-by-name', [CinemaController::class, 'searchCinemaByName']);                      // Tìm kiếm rạp theo tên
+    Route::get('/deleted', [CinemaController::class, 'getDeleted']);                                     // Lấy danh sách rạp đã xóa mềm
+    Route::get('/deleted/search-by-name', [CinemaController::class, 'searchDeletedCinemaByName']);       // Tìm kiếm rạp đã xóa theo tên
+    Route::get('/deleted/search-by-address', [CinemaController::class, 'searchDeletedCinemaByAddress']); // Tìm kiếm rạp đã xóa theo địa chỉ
+    Route::get('/', [CinemaController::class, 'index']);                                                 // Lấy danh sách tất cả rạp chiếu
+    Route::post('/', [CinemaController::class, 'store']);                                                // Thêm rạp mới
+    Route::get('/{id}', [CinemaController::class, 'show']);                                              // Lấy thông tin 1 rạp theo ID
+    Route::put('/{id}', [CinemaController::class, 'update']);                                            // Cập nhật rạp
+    Route::delete('/{id}', [CinemaController::class, 'destroy']);                                        // Xoá mềm rạp
+    Route::put('/restore/{id}', [CinemaController::class, 'restore']);                                   // Khôi phục rạp
 });
 
 // User
