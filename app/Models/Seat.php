@@ -9,10 +9,10 @@ class Seat extends Model
 {
     use HasFactory;
 
-    protected $table = 'seat'; // Tên bảng trong CSDL
-    protected $primaryKey = 'seat_id'; // Khóa chính
-    public $incrementing = false; // Vì dùng UUID nên không tự tăng
-    protected $keyType = 'string'; // Kiểu dữ liệu của khóa chính
+    protected $table = 'seat'; 
+    protected $primaryKey = 'seat_id'; 
+    public $incrementing = false; 
+    protected $keyType = 'string'; 
 
     protected $fillable = [
         'seat_id',
@@ -26,7 +26,7 @@ class Seat extends Model
         'is_deleted' => 'boolean',
     ];
 
-    // Quan hệ: Một ghế thuộc về một phòng (room)
+   
     public function room()
     {
         return $this->belongsTo(Room::class, 'room_id', 'room_id');

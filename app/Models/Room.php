@@ -16,7 +16,6 @@ class Room extends Model
         'room_id', 'cinema_id', 'room_name','status', 'capacity', 'is_deleted'
     ];
 
-    // Define the relationship to the Cinema model
     public function cinema()
     {
         return $this->belongsTo(Cinema::class, 'cinema_id', 'cinema_id')

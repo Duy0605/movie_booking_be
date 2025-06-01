@@ -7,7 +7,7 @@ class Coupon extends Model
 {
     protected $table = 'coupon';
     protected $primaryKey = 'coupon_id';
-    public $incrementing = false; // Vì coupon_id là string
+    public $incrementing = false; 
     protected $keyType = 'string';
 
     protected $fillable = [

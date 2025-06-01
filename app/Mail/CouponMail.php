@@ -23,7 +23,7 @@ class CouponMail extends Mailable
 
     public function build()
     {
-        return $this->subject('Your Special Coupon from Tickitz')
+        return $this->subject('Your Special Coupon from Our Website')
                     ->view('emails.coupon');
     }
 }

@@ -16,12 +16,12 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SettingController;
 use Illuminate\Support\Facades\Route;
 
-
 // Dashboard
 Route::prefix('dashboard')->group(function () {
     Route::get('/', [DashboardController::class, 'getDashboardData']); // Lấy dữ liệu cho Admin Dashboard
 });
-// Room ++
+
+// Room
 Route::prefix('rooms')->group(function () {
     Route::get('/search', [RoomController::class, 'searchByRoomName']);                         // Tìm kiếm phòng theo tên
     Route::get('/', [RoomController::class, 'index']);                                          // Lấy danh sách phòng chưa bị xóa
@@ -31,9 +31,9 @@ Route::prefix('rooms')->group(function () {
     Route::get('{id}', [RoomController::class, 'show']);                                        // Lấy thông tin một phòng theo ID
     Route::put('{id}', [RoomController::class, 'update']);                                      // Cập nhật thông tin phòng
     Route::put('update-capacity/{id}', [RoomController::class, 'updateCapacity']);              // Cập nhật sức chứa phòng
-    Route::put('soft-delete/{id}', [RoomController::class, 'softDelete']);                   // DELETE mềm
+    Route::put('soft-delete/{id}', [RoomController::class, 'softDelete']);                      // Xóa mềm phòng
     Route::patch('restore/{id}', [RoomController::class, 'restore']);                           // Khôi phục phòng bị xóa mềm
-    Route::delete('{id}', [RoomController::class, 'destroy']);                                  // DELETE vĩnh viễn
+    Route::delete('{id}', [RoomController::class, 'destroy']);                                  // Xóa vĩnh viễn phòng
 });
 
 // Seat
@@ -47,7 +47,7 @@ Route::prefix('seats')->group(function () {
     Route::patch('/restore/{id}', [SeatController::class, 'restore']);                          // Khôi phục ghế đã xóa mềm
     Route::delete('/{id}', [SeatController::class, 'destroy']);                                 // Xóa vĩnh viễn ghế
     Route::post('/batch', [SeatController::class, 'storeMultiple']);                            // Tạo mới nhiều ghế
-    Route::post('/softDeleteMultipe', [SeatController::class, 'softDeleteMultiple']);           // Xóa mềm nhiều ghế                              // Tạo mới ghế
+    Route::post('/softDeleteMultipe', [SeatController::class, 'softDeleteMultiple']);           // Xóa mềm nhiều ghế
 });
 
 // Review
@@ -59,25 +59,22 @@ Route::prefix('reviews')->group(function () {
     Route::delete('/{id}', [ReviewController::class, 'destroy']);                               // Xóa đánh giá
     Route::get('/reviews/movie/{movieId}', [ReviewController::class, 'getReviewsByMovie']);     // Lấy danh sách đánh giá theo ID phim
     Route::get('/reviews/user/{userId}', [ReviewController::class, 'getReviewsByUser']);        // Lấy danh sách đánh giá theo ID người dùng
-
 });
 
-// Booking ++
+// Booking
 Route::prefix('bookings')->group(function () {
-    Route::get('/', [BookingController::class, 'index']);              // GET /api/bookings
-    Route::post('/', [BookingController::class, 'store']);             // POST /api/bookings
-    Route::get('/search', [BookingController::class, 'searchBooking']); //Tìm kiếm bookings
-
-    Route::get('/{id}', [BookingController::class, 'show']);           // GET /api/bookings/{id}
-    Route::get('/userId/{id}', [BookingController::class, 'showByUserId']);
-    Route::get('/search', [BookingController::class, 'searchBooking']);    
-    Route::put('/{id}', [BookingController::class, 'update']);         // PUT /api/bookings/{id}
-    Route::put('/{id}/order-code', [BookingController::class, 'updateOrderCode']); // Update order code
-    Route::put('/{booking_id}/coupon', [BookingController::class, 'updateCoupon']);
-    Route::delete('/soft/{id}', [BookingController::class, 'destroy']); // Xóa mềm booking
-    Route::patch('/restore/{id}', [BookingController::class, 'restore']); // Khôi phục booking
-    Route::delete('/{id}', [BookingController::class, 'forceDelete']); // Xóa vĩnh viễn booking
-    Route::put('/bookings/{id}/total-price', [BookingController::class, 'updateTotalPrice']);
+    Route::get('/', [BookingController::class, 'index']);                                       // Lấy danh sách tất cả booking chưa bị xóa mềm
+    Route::post('/', [BookingController::class, 'store']);                                      // Tạo mới booking
+    Route::get('/search', [BookingController::class, 'searchBooking']);                         // Tìm kiếm bookings
+    Route::get('/{id}', [BookingController::class, 'show']);                                    // Lấy thông tin một booking theo ID
+    Route::get('/userId/{id}', [BookingController::class, 'showByUserId']);                     // Lấy danh sách booking theo ID người dùng
+    Route::put('/{id}', [BookingController::class, 'update']);                                  // Cập nhật thông tin booking
+    Route::put('/{id}/order-code', [BookingController::class, 'updateOrderCode']);              // Update order code
+    Route::put('/{booking_id}/coupon', [BookingController::class, 'updateCoupon']);             // Cập nhật mã giảm giá cho booking
+    Route::delete('/soft/{id}', [BookingController::class, 'destroy']);                         // Xóa mềm booking
+    Route::patch('/restore/{id}', [BookingController::class, 'restore']);                       // Khôi phục booking
+    Route::delete('/{id}', [BookingController::class, 'forceDelete']);                          // Xóa vĩnh viễn booking
+    Route::put('/bookings/{id}/total-price', [BookingController::class, 'updateTotalPrice']);   // Cập nhật tổng giá tiền của booking
 });
 
 // Movie
@@ -86,27 +83,27 @@ Route::prefix('movies')->group(function () {
     Route::post('/', [MovieController::class, 'store']);                                        // Tạo mới phim
     Route::get('/{id}', [MovieController::class, 'show']);                                      // Lấy thông tin 1 phim theo ID
     Route::put('/{id}', [MovieController::class, 'update']);                                    // Cập nhật phim
-    Route::delete('/soft/{id}', [MovieController::class, 'destroy']);                           // DELETE mềm
+    Route::delete('/soft/{id}', [MovieController::class, 'destroy']);                           // Xóa mềm phim
     Route::patch('/restore/{id}', [MovieController::class, 'restore']);                         // Khôi phục phim đã bị xóa mềm
     Route::get('/movies/deleted', [MovieController::class, 'getDeletedMovies']);                // Lấy danh sách phim đã xóa mềm
     Route::get('/movies/search', [MovieController::class, 'searchByTitle']);                    // Tìm kiếm phim theo tiêu đề
     Route::get('/movies/now-showing', [MovieController::class, 'getNowShowing']);               // Lấy danh sách phim đang chiếu
     Route::get('/movies/upcoming-movie', [MovieController::class, 'getUpcomingMovie']);         // Lấy danh sách phim sắp chiếu
-    Route::get('/movies/get-all-movies', [MovieController::class, 'getAllMovies']);
-    Route::get('/movies/search-movies', [MovieController::class, 'searchByTitleFE']);
+    Route::get('/movies/get-all-movies', [MovieController::class, 'getAllMovies']);             // Lấy danh sách tất cả phim (bao gồm đã xóa mềm)
+    Route::get('/movies/search-movies', [MovieController::class, 'searchByTitleFE']);           // Tìm kiếm phim theo tiêu đề (frontend)
 });
 
 // ShowTime
 Route::prefix('showtimes')->group(function () {
     Route::get('/search', [ShowTimeController::class, 'searchShowtimes']);
-    Route::get('/', [ShowTimeController::class, 'index']);                                      // Lấy danh sách tất cả lịch chiếu
-    Route::post('/', [ShowTimeController::class, 'store']);                                     // Tạo mới lịch chiếu
-    Route::get('/{id}', [ShowTimeController::class, 'show']);                                   // Lấy thông tin 1 lịch chiếu theo ID
-    Route::put('/{id}', [ShowTimeController::class, 'update']);                                 // Cập nhật lịch chiếu
-    Route::delete('/soft/{id}', [ShowTimeController::class, 'destroy']);                        // Xóa mềm lịch chiếu
-    Route::patch('/restore/{id}', [ShowTimeController::class, 'restore']);                      // Khôi phục lịch chiếu
-    Route::get('/movieId/{id}', [ShowTimeController::class, 'showByMovieId']);                  // Lấy danh sách lịch chiếu theo ID phim
-    Route::get('/cinema/{cinema_id}/date/{date}', [ShowTimeController::class, 'filterByCinemaAndDate']);
+    Route::get('/', [ShowTimeController::class, 'index']);                                               // Lấy danh sách tất cả lịch chiếu
+    Route::post('/', [ShowTimeController::class, 'store']);                                              // Tạo mới lịch chiếu
+    Route::get('/{id}', [ShowTimeController::class, 'show']);                                            // Lấy thông tin 1 lịch chiếu theo ID
+    Route::put('/{id}', [ShowTimeController::class, 'update']);                                          // Cập nhật lịch chiếu
+    Route::delete('/soft/{id}', [ShowTimeController::class, 'destroy']);                                 // Xóa mềm lịch chiếu
+    Route::patch('/restore/{id}', [ShowTimeController::class, 'restore']);                               // Khôi phục lịch chiếu
+    Route::get('/movieId/{id}', [ShowTimeController::class, 'showByMovieId']);                           // Lấy danh sách lịch chiếu theo ID phim
+    Route::get('/cinema/{cinema_id}/date/{date}', [ShowTimeController::class, 'filterByCinemaAndDate']); // Lấy danh sách lịch chiếu theo ID rạp và ngày
 });
 
 // Payment
@@ -134,26 +131,24 @@ Route::prefix('booking-seats')->group(function () {
     Route::patch('/restore/{id}', [BookingSeatController::class, 'restore']);                           // Khôi phục ghế đã đặt
 });
 
-// Coupon ++
+// Coupon
 Route::prefix('coupons')->group(function () {
-    Route::get('/search/code', [CouponController::class, 'searchCouponByCode']);                      // Tìm kiếm mã giảm giá theo mã
+    Route::get('/search/code', [CouponController::class, 'searchCouponByCode']);                 // Tìm kiếm mã giảm giá theo mã
     Route::get('/', [CouponController::class, 'index']);                                         // Lấy danh sách tất cả mã giảm giá
     Route::post('/', [CouponController::class, 'store']);                                        // Tạo mới mã giảm giá
     Route::get('/{id}', [CouponController::class, 'show']);                                      // Lấy thông tin một mã giảm giá theo ID
     Route::get('/deleted', [CouponController::class, 'getDeletedCoupons']);                      // Lấy danh sách mã giảm giá đã xóa mềm
     Route::put('/{id}', [CouponController::class, 'update']);                                    // Cập nhật mã giảm giá
-    Route::delete('/soft/{id}', [CouponController::class, 'softDelete']);                        // soft delete
-    Route::delete('/{id}', [CouponController::class, 'forceDelete']);                            // xóa cứng
+    Route::delete('/soft/{id}', [CouponController::class, 'softDelete']);                        // Xóa mềm mã giảm giá
+    Route::delete('/{id}', [CouponController::class, 'forceDelete']);                            // Xóa cứng mã giảm giá
     Route::patch('/restore/{id}', [CouponController::class, 'restore']);                         // khôi phục xóa mềm
-    // Route::get('/search/code', [CouponController::class, 'searchByCode']);
-    Route::post('{coupon_id}/usage', [CouponController::class, 'updateUsage']);
-    Route::get('/search/code', [CouponController::class, 'searchCouponByCode']);
-    Route::get('/search/exact-code', [CouponController::class, 'searchByExactCode']);
+    Route::post('{coupon_id}/usage', [CouponController::class, 'updateUsage']);                  // Cập nhật số lượng đã sử dụng của mã giảm giá
+    Route::get('/search/exact-code', [CouponController::class, 'searchByExactCode']);            // Tìm kiếm mã giảm giá theo mã chính xác
 });
 
 // Cinema
 Route::prefix('cinemas')->group(function () {
-    Route::get('/search-by-address', [CinemaController::class, 'searchCinemaByAddress']);                  // Tìm kiếm rạp theo địa chỉ
+    Route::get('/search-by-address', [CinemaController::class, 'searchCinemaByAddress']);        // Tìm kiếm rạp theo địa chỉ
     Route::get('/search-by-name', [CinemaController::class, 'searchCinemaByName']);             // Tìm kiếm rạp theo tên
     Route::get('/deleted', [CinemaController::class, 'getDeleted']);                            // Lấy danh sách rạp đã xóa mềm
     Route::get('/', [CinemaController::class, 'index']);                                        // Lấy danh sách tất cả rạp chiếu
@@ -164,7 +159,7 @@ Route::prefix('cinemas')->group(function () {
     Route::put('/restore/{id}', [CinemaController::class, 'restore']);                          // Khôi phục rạp
 });
 
-// User ++
+// User
 Route::prefix('users')->group(function () {
     Route::get('/search', [UserAccountController::class, 'search']);                            // Tìm kiếm người dùng theo tên hoặc số điện thoại
     Route::get('/', [UserAccountController::class, 'index']);                                   // Lấy danh sách người dùng
@@ -174,7 +169,8 @@ Route::prefix('users')->group(function () {
     Route::delete('/soft/{id}', [UserAccountController::class, 'destroy']);                     // Xoá mềm người dùng
     Route::patch('/restore/{id}', [UserAccountController::class, 'restore']);                   // Khôi phục người dùng
     Route::delete('/{id}', [UserAccountController::class, 'forceDelete']);                      // Xoá vĩnh viễn người dùng
-
+    Route::post('/{id}/change-password', [UserAccountController::class, 'changePassword']);     // Đổi mật khẩu người dùng
+    Route::post('/forgot-password', [UserAccountController::class, 'forgotPassword']);          // Quên mật khẩu
 });
 
 // Auth
@@ -188,4 +184,3 @@ Route::prefix('setting')->group(function () {
     Route::get('/', [SettingController::class, 'show']);                                 // Lấy thông tin cài đặt
     Route::put('/', [SettingController::class, 'update']);                               // Cập nhật cài đặt
 });
-

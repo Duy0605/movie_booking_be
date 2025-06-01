@@ -35,6 +35,6 @@ class ShowTime extends Model
     {
         return $this->belongsTo(Room::class, 'room_id', 'room_id')
             ->where('is_deleted', false)
-            ->with('cinema'); // Eager-load the cinema relationship from the Room model
+            ->with('cinema'); 
     }
 }

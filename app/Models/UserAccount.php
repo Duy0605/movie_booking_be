@@ -11,14 +11,14 @@ class UserAccount extends Model
 
     protected $table = 'user_account';
     protected $primaryKey = 'user_id';
-    public $incrementing = false; // Vì dùng UUID
+    public $incrementing = false; 
     protected $keyType = 'string';
 
     protected $fillable = [
         'user_id',
         'username',
         'email',
-        'password', // Laravel mặc định dùng 'password' (dù DB bạn đặt là 'password_hash', nên cần xem lại)
+        'password', 
         'full_name',
         'dob',
         'profile_picture_url',
@@ -38,21 +38,13 @@ class UserAccount extends Model
         'dob' => 'datetime',
     ];
 
-    // Một người dùng có thể có nhiều lượt đặt vé
     public function bookings()
     {
         return $this->hasMany(Booking::class, 'user_id', 'user_id');
     }
 
-    // Một người dùng có thể có nhiều đánh giá phim
     public function reviews()
     {
         return $this->hasMany(Review::class, 'user_id', 'user_id');
     }
-
-    // Một người dùng có thể có nhiều lịch sử giao dịch
-    // public function transactionLogs()
-    // {
-    //     return $this->hasMany(TransactionLog::class, 'user_id', 'user_id');
-    // }
 }

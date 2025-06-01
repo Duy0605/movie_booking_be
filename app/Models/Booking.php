@@ -36,16 +36,15 @@ class Booking extends Model
         return $this->belongsTo(Coupon::class, 'coupon_id');
     }
 
-    // Lấy movie thông qua showtime
     public function movie()
     {
         return $this->hasOneThrough(
             Movie::class,
             ShowTime::class,
-            'showtime_id',  // khóa ngoại trên bảng showtime
-            'movie_id',     // khóa chính bảng movie
-            'showtime_id',  // khóa ngoại trên bảng booking
-            'movie_id'      // khóa ngoại trên bảng showtime
+            'showtime_id', 
+            'movie_id',     
+            'showtime_id',  
+            'movie_id'     
         );
     }
 
@@ -57,7 +56,7 @@ class Booking extends Model
     public function updateTotalPrice()
 {
     $seatCount = $this->bookingSeats()->count();
-    $pricePerSeat = $this->showtime->price; // giả sử showtime có trường price
+    $pricePerSeat = $this->showtime->price; 
 
     $this->total_price = $seatCount * $pricePerSeat;
     $this->save();

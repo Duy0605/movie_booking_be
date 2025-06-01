@@ -51,7 +51,7 @@
               <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 30px;">
                 <tr>
                   <td style="text-align: center;">
-                    <a href="https://tickitz.com/ticket/{{ $booking_id }}" style="display: inline-block; padding: 14px 30px; background-color: #5f2eea; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 12px; transition: background-color 0.3s;">
+                    <a href="http://localhost:5173/ticket/{{ $booking_id }}" style="display: inline-block; padding: 14px 30px; background-color: #5f2eea; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 12px; transition: background-color 0.3s;">
                       View Your Ticket
                     </a>
                   </td>
@@ -68,8 +68,8 @@
                 © 2025 Tickitz. All rights reserved.
               </p>
               <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                <a href="https://tickitz.com" style="color: #5f2eea; text-decoration: none;">Visit our website</a> | 
-                <a href="mailto:support@tickitz.com" style="color: #5f2eea; text-decoration: none;">Contact Support</a>
+                <a href="http://localhost:5173/" style="color: #5f2eea; text-decoration: none;">Visit our website</a> | 
+                <a href="mailto:ducanhb8a4@gmail.com" style="color: #5f2eea; text-decoration: none;">Contact Support</a>
               </p>
             </td>
           </tr>

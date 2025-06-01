@@ -9,13 +9,13 @@ class Cinema extends Model
 {
     use HasFactory;
 
-    protected $table = 'cinema'; // Tên bảng
+    protected $table = 'cinema'; 
 
-    protected $primaryKey = 'cinema_id'; // Khóa chính
+    protected $primaryKey = 'cinema_id'; 
 
-    public $incrementing = false; // Do sử dụng UUID, không auto-increment
+    public $incrementing = false;
 
-    protected $keyType = 'string'; // Kiểu của primary key là chuỗi
+    protected $keyType = 'string';
 
     protected $fillable = [
         'cinema_id',
@@ -30,7 +30,6 @@ class Cinema extends Model
         'is_deleted' => 'boolean',
     ];
 
-    // Quan hệ: 1 cinema có nhiều room
     public function rooms()
     {
         return $this->hasMany(Room::class, 'cinema_id', 'cinema_id');

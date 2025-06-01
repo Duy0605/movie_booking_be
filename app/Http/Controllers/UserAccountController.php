@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Response\ApiResponse;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PasswordResetMail;
 
 class UserAccountController extends Controller
 {
@@ -22,8 +24,6 @@ class UserAccountController extends Controller
 
         return ApiResponse::success($users, 'Danh sách người dùng');
     }
-
-
 
     // Lấy thông tin một người dùng theo ID
     public function show($id)
@@ -50,7 +50,7 @@ class UserAccountController extends Controller
             'dob' => 'nullable|date',
             'phone' => 'required|string|max:15|unique:user_account,phone',
             'profile_picture_url' => 'url',
-            'role' => 'string|max:20', // nếu có sử dụng phân quyền
+            'role' => 'string|max:20',
         ]);
 
         $user = UserAccount::create([
@@ -68,7 +68,6 @@ class UserAccountController extends Controller
 
         return ApiResponse::success($user, 'Tạo người dùng thành công', 201);
     }
-
 
     // Cập nhật thông tin người dùng
     public function update(Request $request, $id)
@@ -122,8 +121,6 @@ class UserAccountController extends Controller
         return ApiResponse::success($users, 'Kết quả tìm kiếm người dùng');
     }
 
-
-
     // Xoá mềm người dùng
     public function destroy($id)
     {
@@ -165,9 +162,64 @@ class UserAccountController extends Controller
             return ApiResponse::error('Không tìm thấy người dùng để xóa vĩnh viễn', 404);
         }
 
-        $user->delete(); // xóa hẳn khỏi DB
+        $user->delete();
 
         return ApiResponse::success(null, 'Xóa người dùng vĩnh viễn thành công');
     }
 
+    // Đổi mật khẩu người dùng
+    public function changePassword(Request $request, $id)
+    {
+        $user = UserAccount::where('user_id', $id)
+            ->where('is_deleted', false)
+            ->first();
+
+        if (!$user) {
+            return ApiResponse::error('Không tìm thấy người dùng', 404);
+        }
+
+        $request->validate([
+            'old_password' => 'required|string',
+            'new_password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if (!Hash::check($request->old_password, $user->password)) {
+            return ApiResponse::error('Mật khẩu cũ không đúng', 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return ApiResponse::success(null, 'Đổi mật khẩu thành công');
+    }
+
+    // Quên mật khẩu
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $user = UserAccount::where('email', $request->email)
+            ->where('is_deleted', false)
+            ->first();
+
+        if (!$user) {
+            return ApiResponse::error('Không tìm thấy người dùng với email này', 404);
+        }
+
+        $newPassword = Str::random(12);
+
+        $user->update([
+            'password' => Hash::make($newPassword),
+        ]);
+
+        Mail::to($user->email)->send(new PasswordResetMail(
+            $user->name,
+            $newPassword
+        ));
+
+        return ApiResponse::success(null, 'Mật khẩu đã được đặt lại và email thông báo đã được gửi');
+    }
 }
