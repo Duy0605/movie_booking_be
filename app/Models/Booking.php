@@ -18,6 +18,8 @@ class Booking extends Model
         'total_price',
         'status',
         'order_code',
+        'barcode',
+        'is_used',
         'is_deleted',
     ];
 

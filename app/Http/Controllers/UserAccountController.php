@@ -216,7 +216,7 @@ class UserAccountController extends Controller
         ]);
 
         Mail::to($user->email)->send(new PasswordResetMail(
-            $user->name,
+            $user->full_name,
             $newPassword
         ));
 

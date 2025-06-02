@@ -31,7 +31,7 @@ Route::prefix('rooms')->group(function () {
     Route::get('{id}', [RoomController::class, 'show']);                                        // Lấy thông tin một phòng theo ID
     Route::put('{id}', [RoomController::class, 'update']);                                      // Cập nhật thông tin phòng
     Route::put('update-capacity/{id}', [RoomController::class, 'updateCapacity']);              // Cập nhật sức chứa phòng
-    Route::put('soft-delete/{id}', [RoomController::class, 'softDelete']);                   // DELETE mềm
+    Route::put('soft-delete/{id}', [RoomController::class, 'softDelete']);                      // DELETE mềm
     Route::patch('restore/{id}', [RoomController::class, 'restore']);                           // Khôi phục phòng bị xóa mềm
     Route::delete('{id}', [RoomController::class, 'destroy']);                                  // DELETE vĩnh viễn
 });
@@ -47,7 +47,7 @@ Route::prefix('seats')->group(function () {
     Route::patch('/restore/{id}', [SeatController::class, 'restore']);                          // Khôi phục ghế đã xóa mềm
     Route::delete('/{id}', [SeatController::class, 'destroy']);                                 // Xóa vĩnh viễn ghế
     Route::post('/batch', [SeatController::class, 'storeMultiple']);                            // Tạo mới nhiều ghế
-    Route::post('/softDeleteMultipe', [SeatController::class, 'softDeleteMultiple']);           // Xóa mềm nhiều ghế                              // Tạo mới ghế
+    Route::post('/softDeleteMultipe', [SeatController::class, 'softDeleteMultiple']);           // Xóa mềm nhiều ghế                           
 });
 
 // Review
@@ -64,20 +64,19 @@ Route::prefix('reviews')->group(function () {
 
 // Booking ++
 Route::prefix('bookings')->group(function () {
-    Route::get('/', [BookingController::class, 'index']);              // GET /api/bookings
-    Route::post('/', [BookingController::class, 'store']);             // POST /api/bookings
-    Route::get('/search', [BookingController::class, 'searchBooking']); //Tìm kiếm bookings
-
-    Route::get('/{id}', [BookingController::class, 'show']);           // GET /api/bookings/{id}
-    Route::get('/userId/{id}', [BookingController::class, 'showByUserId']);
-    Route::get('/search', [BookingController::class, 'searchBooking']);
-    Route::put('/{id}', [BookingController::class, 'update']);         // PUT /api/bookings/{id}
-    Route::put('/{id}/order-code', [BookingController::class, 'updateOrderCode']); // Update order code
-    Route::put('/{booking_id}/coupon', [BookingController::class, 'updateCoupon']);
-    Route::delete('/soft/{id}', [BookingController::class, 'destroy']); // Xóa mềm booking
-    Route::patch('/restore/{id}', [BookingController::class, 'restore']); // Khôi phục booking
-    Route::delete('/{id}', [BookingController::class, 'forceDelete']); // Xóa vĩnh viễn booking
-    Route::put('/bookings/{id}/total-price', [BookingController::class, 'updateTotalPrice']);
+    Route::get('/', [BookingController::class, 'index']);                                       // Lấy danh sách tất cả booking chưa bị xóa mềm
+    Route::post('/', [BookingController::class, 'store']);                                      // Tạo mới booking
+    Route::get('/search', [BookingController::class, 'searchBooking']);                         // Tìm kiếm bookings
+    Route::get('/{id}', [BookingController::class, 'show']);                                    // Lấy thông tin một booking theo ID
+    Route::get('/userId/{id}', [BookingController::class, 'showByUserId']);                     // Lấy danh sách booking theo ID người dùng
+    Route::put('/{id}', [BookingController::class, 'update']);                                  // Cập nhật thông tin booking
+    Route::put('/{id}/order-code', [BookingController::class, 'updateOrderCode']);              // Update order code
+    Route::put('/{booking_id}/coupon', [BookingController::class, 'updateCoupon']);             // Cập nhật mã giảm giá cho booking
+    Route::patch('/{bookingId}/barcode', [BookingController::class, 'updateBarcode']);          // Cập nhật mã vạch cho booking
+    Route::delete('/soft/{id}', [BookingController::class, 'destroy']);                         // Xóa mềm booking
+    Route::patch('/restore/{id}', [BookingController::class, 'restore']);                       // Khôi phục booking
+    Route::delete('/{id}', [BookingController::class, 'forceDelete']);                          // Xóa vĩnh viễn booking
+    Route::put('/bookings/{id}/total-price', [BookingController::class, 'updateTotalPrice']);   // Cập nhật tổng giá tiền của booking
 });
 
 // Movie
