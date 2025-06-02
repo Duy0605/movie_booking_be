@@ -331,7 +331,6 @@ public function update(Request $request, $id)
 
 public function updateBarcode(Request $request, $bookingId)
     {
-        \Log::info("Updating barcode URL for booking ID: {$bookingId}", $request->all());
 
         $request->validate([
             'barcode' => 'required|url',
@@ -339,14 +338,11 @@ public function updateBarcode(Request $request, $bookingId)
 
         $booking = Booking::where('booking_id', $bookingId)->first();
         if (!$booking) {
-            \Log::error("booking not found for booking ID: {$bookingId}");
             return ApiResponse::error('booking không tồn tại', 404);
         }
 
         $booking->barcode = $request->barcode;
         $booking->save();
-
-        \Log::info("Barcode URL updated for booking ID: {$booking->booking_id}", ['barcode' => $request->barcode]);
 
         return ApiResponse::success($booking, 'Cập nhật barcode URL thành công');
     }

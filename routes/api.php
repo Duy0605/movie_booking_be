@@ -174,7 +174,8 @@ Route::prefix('users')->group(function () {
     Route::delete('/soft/{id}', [UserAccountController::class, 'destroy']);                     // Xoá mềm người dùng
     Route::patch('/restore/{id}', [UserAccountController::class, 'restore']);                   // Khôi phục người dùng
     Route::delete('/{id}', [UserAccountController::class, 'forceDelete']);                      // Xoá vĩnh viễn người dùng
-
+    Route::post('/{id}/change-password', [UserAccountController::class, 'changePassword']);     // Đổi mật khẩu người dùng
+    Route::post('/forgot-password', [UserAccountController::class, 'forgotPassword']);          // Quên mật khẩu
 });
 
 // Auth

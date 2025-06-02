@@ -219,7 +219,7 @@ class BookingSeatController extends Controller
             return ApiResponse::error('Suất chiếu không tồn tại', 404);
         }
 
-        $perPage = request()->input('per_page', 20);
+        $perPage = request()->input('per_page', 1000);
 
         $seats = Seat::where('room_id', $showtime->room_id)
             ->where('is_deleted', false)
