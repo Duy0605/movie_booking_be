@@ -43,7 +43,7 @@ class SettingController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|url',
             'vip' => 'required|numeric|min:0|max:100',
-            'couple' => 'required|numeric|min:100|max:200',
+            'couple' => 'required|numeric|min:0|max:100',
             'banner' => 'required|array',
             'banner.*' => 'string|url|regex:/^https:\/\/res\.cloudinary\.com/', // Ensure each URL is a valid Cloudinary URL
         ]);
