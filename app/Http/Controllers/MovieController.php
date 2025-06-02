@@ -315,22 +315,39 @@ class MovieController extends Controller
     {
         $perPage = $request->input('per_page', 10);
         $currentDate = Carbon::today();
-        $endDate = $currentDate->copy()->addDays(7); // 👈 Thời gian kết thúc trong 7 ngày tới
+        $endDate = $currentDate->copy()->addDays(7);
 
         $movies = Movie::where('is_deleted', false)
             ->where('release_date', '<=', $currentDate)
             ->whereHas('showtimes', function ($query) use ($currentDate, $endDate) {
                 $query->where('is_deleted', false)
-                    ->whereBetween('start_time', [$currentDate, $endDate]); // 👈 Lọc trong khoảng 7 ngày
+                    ->whereBetween('start_time', [$currentDate, $endDate])
+                    ->whereHas('room', function ($roomQuery) {
+                        $roomQuery->where('is_deleted', false)
+                            ->whereHas('cinema', function ($cinemaQuery) {
+                                $cinemaQuery->where('is_deleted', false);
+                            });
+                    });
             })
             ->with([
                 'showtimes' => function ($query) use ($currentDate, $endDate) {
                     $query->where('is_deleted', false)
                         ->whereBetween('start_time', [$currentDate, $endDate])
+                        ->whereHas('room', function ($roomQuery) {
+                            $roomQuery->where('is_deleted', false)
+                                ->whereHas('cinema', function ($cinemaQuery) {
+                                    $cinemaQuery->where('is_deleted', false);
+                                });
+                        })
                         ->select('showtime_id', 'movie_id', 'start_time', 'room_id');
                 },
+                'showtimes.room' => function ($query) {
+                    $query->where('is_deleted', false)
+                        ->select('room_id', 'cinema_id');
+                },
                 'showtimes.room.cinema' => function ($query) {
-                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                    $query->where('is_deleted', false)
+                        ->select('cinema_id', 'name');
                 }
             ])
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
@@ -380,21 +397,38 @@ class MovieController extends Controller
     public function getUpcomingMovie(Request $request)
     {
         $perPage = $request->input('per_page', 10);
-        $startDate = Carbon::today()->addDays(7); // 👈 bắt đầu từ 7 ngày sau hôm nay
+        $startDate = Carbon::today()->addDays(7);
 
         $movies = Movie::where('is_deleted', false)
             ->whereHas('showtimes', function ($query) use ($startDate) {
                 $query->where('is_deleted', false)
-                    ->where('start_time', '>=', $startDate); // 👈 lọc suất chiếu sau 7 ngày
+                    ->where('start_time', '>=', $startDate)
+                    ->whereHas('room', function ($roomQuery) {
+                        $roomQuery->where('is_deleted', false)
+                            ->whereHas('cinema', function ($cinemaQuery) {
+                                $cinemaQuery->where('is_deleted', false);
+                            });
+                    });
             })
             ->with([
                 'showtimes' => function ($query) use ($startDate) {
                     $query->where('is_deleted', false)
                         ->where('start_time', '>=', $startDate)
+                        ->whereHas('room', function ($roomQuery) {
+                            $roomQuery->where('is_deleted', false)
+                                ->whereHas('cinema', function ($cinemaQuery) {
+                                    $cinemaQuery->where('is_deleted', false);
+                                });
+                        })
                         ->select('showtime_id', 'movie_id', 'start_time', 'room_id');
                 },
+                'showtimes.room' => function ($query) {
+                    $query->where('is_deleted', false)
+                        ->select('room_id', 'cinema_id');
+                },
                 'showtimes.room.cinema' => function ($query) {
-                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                    $query->where('is_deleted', false)
+                        ->select('cinema_id', 'name');
                 }
             ])
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
