@@ -22,10 +22,17 @@ class ShowTimeController extends Controller
                 $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
             },
             'room.cinema' => function ($query) {
-                $query->select('cinema_id', 'name')->where('is_deleted', false);
+                $query->select('cinema_id', 'name')
+                    ->where('is_deleted', false);
             }
         ])
             ->where('is_deleted', false)
+            ->whereHas('room', function ($query) {
+                $query->where('is_deleted', false)
+                    ->whereHas('cinema', function ($cinemaQuery) {
+                        $cinemaQuery->where('is_deleted', false);
+                    });
+            })
             ->paginate($perPage);
 
         return response()->json([
@@ -55,12 +62,17 @@ class ShowTimeController extends Controller
                 $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
             },
             'room.cinema' => function ($query) {
-                $query->select('cinema_id', 'name')->where('is_deleted', false);
+                $query->select('cinema_id', 'name')
+                    ->where('is_deleted', false);
             }
         ])
             ->where('is_deleted', false)
             ->whereHas('room', function ($query) use ($cinema_id) {
-                $query->where('cinema_id', $cinema_id)->where('is_deleted', false);
+                $query->where('cinema_id', $cinema_id)
+                    ->where('is_deleted', false)
+                    ->whereHas('cinema', function ($cinemaQuery) {
+                        $cinemaQuery->where('is_deleted', false);
+                    });
             })
             ->whereDate('start_time', Carbon::parse($date)->toDateString());
 
@@ -139,7 +151,8 @@ class ShowTimeController extends Controller
                 $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
             },
             'room.cinema' => function ($query) {
-                $query->select('cinema_id', 'name')->where('is_deleted', false);
+                $query->select('cinema_id', 'name')
+                    ->where('is_deleted', false);
             }
         ]);
 
@@ -159,11 +172,18 @@ class ShowTimeController extends Controller
                     $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
                 },
                 'room.cinema' => function ($query) {
-                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                    $query->select('cinema_id', 'name')
+                        ->where('is_deleted', false);
                 }
             ])
                 ->where('showtime_id', $id)
                 ->where('is_deleted', false)
+                ->whereHas('room', function ($query) {
+                    $query->where('is_deleted', false)
+                        ->whereHas('cinema', function ($cinemaQuery) {
+                            $cinemaQuery->where('is_deleted', false);
+                        });
+                })
                 ->firstOrFail();
 
             return response()->json([
@@ -191,13 +211,20 @@ class ShowTimeController extends Controller
                 $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
             },
             'room.cinema' => function ($query) {
-                $query->select('cinema_id', 'name')->where('is_deleted', false);
+                $query->select('cinema_id', 'name', 'address')
+                    ->where('is_deleted', false);
             }
         ])
             ->where('movie_id', $id)
             ->where('is_deleted', false)
             ->where('start_time', '>=', $futureTime)
-            ->where('start_time', '<=', $maxTime) 
+            ->where('start_time', '<=', $maxTime)
+            ->whereHas('room', function ($query) {
+                $query->where('is_deleted', false)
+                    ->whereHas('cinema', function ($cinemaQuery) {
+                        $cinemaQuery->where('is_deleted', false);
+                    });
+            })
             ->paginate($perPage);
 
         if ($showtimes->isEmpty()) {
@@ -275,7 +302,8 @@ class ShowTimeController extends Controller
                     $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
                 },
                 'room.cinema' => function ($query) {
-                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                    $query->select('cinema_id', 'name')
+                        ->where('is_deleted', false);
                 }
             ]);
 
@@ -310,10 +338,17 @@ class ShowTimeController extends Controller
                 $q->select('movie_id', 'title', 'duration')->where('is_deleted', false);
             },
             'room.cinema' => function ($q) {
-                $q->select('cinema_id', 'name')->where('is_deleted', false);
+                $q->select('cinema_id', 'name')
+                    ->where('is_deleted', false);
             }
         ])
             ->where('is_deleted', false)
+            ->whereHas('room', function ($query) {
+                $query->where('is_deleted', false)
+                    ->whereHas('cinema', function ($cinemaQuery) {
+                        $cinemaQuery->where('is_deleted', false);
+                    });
+            })
             ->where(function ($query) use ($keyword) {
                 $query->whereHas('movie', function ($q) use ($keyword) {
                     $q->where('title', 'LIKE', '%' . $keyword . '%');
@@ -360,6 +395,12 @@ class ShowTimeController extends Controller
         try {
             $showtime = ShowTime::where('showtime_id', $id)
                 ->where('is_deleted', true)
+                ->whereHas('room', function ($query) {
+                    $query->where('is_deleted', false)
+                        ->whereHas('cinema', function ($cinemaQuery) {
+                            $cinemaQuery->where('is_deleted', false);
+                        });
+                })
                 ->firstOrFail();
 
             $showtime->is_deleted = false;
@@ -371,7 +412,8 @@ class ShowTimeController extends Controller
                     $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
                 },
                 'room.cinema' => function ($query) {
-                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                    $query->select('cinema_id', 'name')
+                        ->where('is_deleted', false);
                 }
             ]);
 
