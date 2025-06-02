@@ -28,7 +28,7 @@ class BookingController extends Controller
         return ApiResponse::success($bookings, 'Lấy danh sách booking thành công');
     }
 
-    // Tạo mới một booking và gán ghế (nếu có)
+    // Tạo mới một booking
     public function store(Request $request)
     {
         $request->validate([
@@ -40,6 +40,7 @@ class BookingController extends Controller
 
         DB::beginTransaction();
         try {
+            // Tạo booking
             $booking = Booking::create([
                 'booking_id' => Str::uuid(),
                 'user_id' => $request->user_id,
@@ -49,6 +50,7 @@ class BookingController extends Controller
                 'is_deleted' => false,
             ]);
 
+            // Gán ghế nếu có
             if ($request->has('seat_ids')) {
                 foreach ($request->seat_ids as $seat_id) {
                     $booking->bookingSeats()->create([
@@ -58,12 +60,22 @@ class BookingController extends Controller
                 }
             }
 
-            // Dispatch the CancelSingleBooking job with a 5-minute delay for this specific booking
+            // Dispatch job hủy booking sau 5 phút
             CancelSingleBooking::dispatch($booking->booking_id)
                 ->delay(now()->addMinutes(5));
 
+            // Lấy thông tin suất chiếu và phim
+            $showtime = $booking->showtime()->with('movie')->first();
+            $movieTitle = $showtime->movie->title ?? null;
+
             DB::commit();
-            return ApiResponse::success($booking, 'Tạo booking thành công', 201);
+
+            // Trả về tất cả thuộc tính của booking và thêm movie_title
+            return ApiResponse::success(
+                array_merge($booking->toArray(), ['movie_title' => $movieTitle]),
+                'Tạo booking thành công',
+                201
+            );
         } catch (\Exception $e) {
             DB::rollBack();
             return ApiResponse::error('Lỗi tạo booking', 500, $e->getMessage());
