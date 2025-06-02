@@ -84,16 +84,17 @@ Route::prefix('bookings')->group(function () {
 Route::prefix('movies')->group(function () {
     Route::get('/', [MovieController::class, 'index']);                                         // Lấy danh sách tất cả phim
     Route::post('/', [MovieController::class, 'store']);                                        // Tạo mới phim
+    Route::get('/deleted', [MovieController::class, 'getDeletedMovies']);
     Route::get('/{id}', [MovieController::class, 'show']);                                      // Lấy thông tin 1 phim theo ID
     Route::put('/{id}', [MovieController::class, 'update']);                                    // Cập nhật phim
-    Route::delete('/soft/{id}', [MovieController::class, 'destroy']);                           // DELETE mềm
+    Route::delete('/soft/{id}', [MovieController::class, 'destroy']);                           // Xóa mềm phim
     Route::patch('/restore/{id}', [MovieController::class, 'restore']);                         // Khôi phục phim đã bị xóa mềm
     Route::get('/movies/deleted', [MovieController::class, 'getDeletedMovies']);                // Lấy danh sách phim đã xóa mềm
     Route::get('/movies/search', [MovieController::class, 'searchByTitle']);                    // Tìm kiếm phim theo tiêu đề
     Route::get('/movies/now-showing', [MovieController::class, 'getNowShowing']);               // Lấy danh sách phim đang chiếu
     Route::get('/movies/upcoming-movie', [MovieController::class, 'getUpcomingMovie']);         // Lấy danh sách phim sắp chiếu
-    Route::get('/movies/get-all-movies', [MovieController::class, 'getAllMovies']);
-    Route::get('/movies/search-movies', [MovieController::class, 'searchByTitleFE']);
+    Route::get('/movies/get-all-movies', [MovieController::class, 'getAllMovies']);             // Lấy danh sách tất cả phim (bao gồm đã xóa mềm)
+    Route::get('/movies/search-movies', [MovieController::class, 'searchByTitleFE']);           // Tìm kiếm phim theo tiêu đề (frontend)
 });
 
 // ShowTime

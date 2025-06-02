@@ -26,8 +26,8 @@ class DashboardController extends Controller
             }
 
             // Fetch dashboard data
-            $totalBookings = $this->getTotalBookings();
-            $totalRevenue = $this->getTotalRevenue();
+            $totalBookings = $this->getTotalBookings($filter);
+            $totalRevenue = $this->getTotalRevenue($filter);
             $recentBookings = $this->getRecentBookings();
             $revenueData = $this->getRevenueData($filter);
             $topMovies = $this->getTopMovies();
@@ -49,18 +49,38 @@ class DashboardController extends Controller
         }
     }
 
-    private function getTotalBookings()
+    private function getTotalBookings($filter)
     {
-        return Booking::where('is_deleted', false)
-            ->where('status', 'CONFIRMED')
-            ->count();
+        $query = Booking::where('is_deleted', false)
+            ->where('status', 'CONFIRMED');
+
+        if ($filter === 'day') {
+            $query->where('created_at', '>=', Carbon::today());
+        } elseif ($filter === 'week') {
+            $query->where('created_at', '>=', Carbon::now()->startOfWeek());
+        } else {
+            // Month
+            $query->where('created_at', '>=', Carbon::now()->startOfMonth());
+        }
+
+        return $query->count();
     }
 
-    private function getTotalRevenue()
+    private function getTotalRevenue($filter)
     {
-        return Booking::where('is_deleted', false)
-            ->where('status', 'CONFIRMED')
-            ->sum('total_price');
+        $query = Booking::where('is_deleted', false)
+            ->where('status', 'CONFIRMED');
+
+        if ($filter === 'day') {
+            $query->where('created_at', '>=', Carbon::today());
+        } elseif ($filter === 'week') {
+            $query->where('created_at', '>=', Carbon::now()->startOfWeek());
+        } else {
+            // Month
+            $query->where('created_at', '>=', Carbon::now()->startOfMonth());
+        }
+
+        return (float) $query->sum('total_price');
     }
 
     private function getRecentBookings()
