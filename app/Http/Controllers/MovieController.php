@@ -315,17 +315,18 @@ class MovieController extends Controller
     {
         $perPage = $request->input('per_page', 10);
         $currentDate = Carbon::today();
+        $endDate = $currentDate->copy()->addDays(7); // 👈 Thời gian kết thúc trong 7 ngày tới
 
         $movies = Movie::where('is_deleted', false)
             ->where('release_date', '<=', $currentDate)
-            ->whereHas('showtimes', function ($query) use ($currentDate) {
+            ->whereHas('showtimes', function ($query) use ($currentDate, $endDate) {
                 $query->where('is_deleted', false)
-                    ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate]);
+                    ->whereBetween('start_time', [$currentDate, $endDate]); // 👈 Lọc trong khoảng 7 ngày
             })
             ->with([
-                'showtimes' => function ($query) use ($currentDate) {
+                'showtimes' => function ($query) use ($currentDate, $endDate) {
                     $query->where('is_deleted', false)
-                        ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate])
+                        ->whereBetween('start_time', [$currentDate, $endDate])
                         ->select('showtime_id', 'movie_id', 'start_time', 'room_id');
                 },
                 'showtimes.room.cinema' => function ($query) {
@@ -374,22 +375,22 @@ class MovieController extends Controller
         ], 200);
     }
 
+
     // Lấy danh sách phim sắp chiếu
     public function getUpcomingMovie(Request $request)
     {
         $perPage = $request->input('per_page', 10);
-        $currentDate = Carbon::today();
+        $startDate = Carbon::today()->addDays(7); // 👈 bắt đầu từ 7 ngày sau hôm nay
 
         $movies = Movie::where('is_deleted', false)
-            ->where('release_date', '>', $currentDate)
-            ->whereHas('showtimes', function ($query) use ($currentDate) {
+            ->whereHas('showtimes', function ($query) use ($startDate) {
                 $query->where('is_deleted', false)
-                    ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate]);
+                    ->where('start_time', '>=', $startDate); // 👈 lọc suất chiếu sau 7 ngày
             })
             ->with([
-                'showtimes' => function ($query) use ($currentDate) {
+                'showtimes' => function ($query) use ($startDate) {
                     $query->where('is_deleted', false)
-                        ->whereRaw('DATE_ADD(start_time, INTERVAL 7 DAY) >= ?', [$currentDate])
+                        ->where('start_time', '>=', $startDate)
                         ->select('showtime_id', 'movie_id', 'start_time', 'room_id');
                 },
                 'showtimes.room.cinema' => function ($query) {
@@ -437,6 +438,7 @@ class MovieController extends Controller
             'data' => $movies
         ], 200);
     }
+
 
     // Lấy danh sách tất cả phim (bao gồm thông tin rạp và lịch chiếu)
     public function getAllMovies(Request $request)
