@@ -1,61 +1,142 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Movie Booking Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Mô tả
+Dự án Movie Booking Backend là một ứng dụng web mạnh mẽ, cho phép người dùng đặt vé xem phim trực tuyến một cách tiện lợi. Ứng dụng cung cấp các tính năng quản lý phim, đặt vé, thanh toán an toàn và gửi email xác nhận, mang đến trải nghiệm mượt mà cho cả người dùng và quản trị viên.
+## Công nghệ sử dụng
 
-## About Laravel
+Dự án Movie Booking Backend được xây dựng với các công nghệ và công cụ sau:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Ngôn ngữ lập trình:
+- **PHP:** Ngôn ngữ chính được sử dụng để phát triển ứng dụng.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Framework:
+- **Laravel:** Framework PHP mạnh mẽ giúp xây dựng ứng dụng web một cách nhanh chóng và hiệu quả.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Cơ sở dữ liệu:
+- **MySQL hoặc MariaDB:** Hệ quản trị cơ sở dữ liệu được sử dụng để lưu trữ thông tin về phim, vé và người dùng.
 
-## Learning Laravel
+### Quản lý gói:
+- **Composer:** Công cụ quản lý gói cho PHP, giúp cài đặt và quản lý các thư viện bên ngoài.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### API:
+- **RESTful API:** Dự án sử dụng kiến trúc REST để xây dựng các endpoint cho việc tương tác giữa frontend và backend.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### Xác thực:
+- **JWT (JSON Web Token):** Được sử dụng để xác thực người dùng và bảo vệ các endpoint của API.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Tính năng chính
 
-## Laravel Sponsors
+ **Quản lý phim**:
+   - Dễ dàng thêm, chỉnh sửa hoặc xóa thông tin phim.
+   - Cung cấp chi tiết đầy đủ về phim: tiêu đề, mô tả, lịch chiếu, thể loại, mang đến trải nghiệm khám phá phong phú.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+ **Đặt vé trực tuyến**:
+   - Lựa chọn phim, suất chiếu và số lượng vé chỉ với vài cú nhấp chuột.
+   - Hỗ trợ chọn ghế ngồi trực quan, kèm theo kiểm tra trạng thái ghế trống theo thời gian thực.
 
-### Premium Partners
+ **Theo dõi lịch chiếu**:
+   - Xem lịch chiếu chi tiết theo ngày và giờ, được cập nhật liên tục.
+   - Dễ dàng nắm bắt thông tin các suất chiếu sắp tới để lên kế hoạch xem phim.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+ **Xác thực người dùng**:
+   - Đăng ký và đăng nhập an toàn, nhanh chóng.
+   - Tận dụng JWT (JSON Web Token) để bảo mật các endpoint API, đảm bảo quyền truy cập được kiểm soát chặt chẽ.
 
-## Contributing
+ **Thông báo qua email**:
+   - Gửi email xác nhận đặt vé tự động với đầy đủ thông tin: phim, thời gian, ghế ngồi.
+   - Mang đến sự tiện lợi và chuyên nghiệp cho người dùng sau mỗi giao dịch.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+ **Quản lý vé**:
+   - Theo dõi và quản lý lịch sử đặt vé một cách dễ dàng.
+   - Hỗ trợ hủy vé linh hoạt trong các trường hợp được phép.
 
-## Code of Conduct
+ **Thanh toán qua PayOS**:
+   - Tích hợp thanh toán trực tuyến an toàn, nhanh chóng qua PayOS.
+   - Cung cấp thông tin giao dịch rõ ràng và xác nhận tức thì sau khi thanh toán thành công.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+ **Thanh toán tự động**:
+   - Tính năng thanh toán tự động qua PayOS, loại bỏ thao tác xác nhận thủ công.
+   - Xử lý giao dịch liền mạch, cập nhật trạng thái vé ngay khi thanh toán hoàn tất.
 
-## Security Vulnerabilities
+ **API RESTful mạnh mẽ**:
+   - Cung cấp các endpoint RESTful linh hoạt, dễ dàng tích hợp với ứng dụng frontend hoặc di động.
+   - Đảm bảo hiệu suất cao và khả năng mở rộng.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+ **Bảo mật tối ưu**:
+    - Áp dụng các biện pháp bảo mật tiên tiến để bảo vệ dữ liệu người dùng và thông tin giao dịch.
+    - Hệ thống xác thực và phân quyền chặt chẽ, đảm bảo an toàn tuyệt đối.
 
-## License
+## Cài đặt dự án
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+#### Bước 1: Clone repository
+Mở terminal và chạy lệnh sau để clone dự án về máy:
+```bash
+git clone https://github.com/Duy0605/movie_booking_be.git
+```
+
+#### Bước 2: Chuyển đến thư mục dự án
+```bash
+cd movie_booking_be
+```
+
+#### Bước 3: Cài đặt các phụ thuộc
+Chạy lệnh sau để cài đặt tất cả các thư viện cần thiết:
+```bash
+composer install
+```
+
+#### Bước 4: Tạo file cấu hình
+Sao chép file .env.example thành file .env:
+```bash
+cp .env.example .env
+```
+
+#### Bước 5: Cấu hình cơ sở dữ liệu
+Mở file .env và cấu hình thông tin kết nối cơ sở dữ liệu của bạn:
+```bash
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=your_database_name
+DB_USERNAME=your_database_user
+DB_PASSWORD=your_database_password
+```
+
+#### Bước 6: Cấu hình Mailer
+Trong file .env, bạn cũng cần cấu hình thông tin gửi email. Dưới đây là một ví dụ cấu hình cho SMTP:
+```bash
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=your_mailtrap_username
+MAIL_PASSWORD=your_mailtrap_password
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS=your_email@example.com
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+#### Bước 7: Cấu hình PayOS
+Thêm các thông tin cấu hình cho PayOS vào file .env:
+```bash
+PAYOS_MERCHANT_ID=your_merchant_id
+PAYOS_SECRET_KEY=your_secret_key
+PAYOS_API_URL=https://api.payos.vn/v1/transaction
+```
+Thay thế your_merchant_id và your_secret_key bằng thông tin thực tế của bạn từ tài khoản PayOS.
+
+#### Bước 8: Chạy migrations
+Chạy lệnh sau để tạo các bảng trong cơ sở dữ liệu:
+```bash
+php artisan migrate
+```
+
+#### Bước 9: Khởi động server
+Cuối cùng, khởi động server bằng lệnh:
+```bash
+php artisan serve
+```
+
+## Support
+
+For support, please send an email to manhduc889@gmail.com.
+
