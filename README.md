@@ -1,5 +1,12 @@
 # Movie Booking Backend
 
+## Table of Contents
+- [Description](#description)
+- [Technologies Used](#technologies-used)
+- [Main Features](#main-features)
+- [Project Setup](#project-setup)
+- [Support](#support)
+
 ## Description
 The Movie Booking Backend project is a powerful web application that allows users to conveniently book movie tickets online. The application provides essential features for both moviegoers and administrators, ensuring a smooth and secure movie ticket booking experience.
 
@@ -25,6 +32,7 @@ The Movie Booking Backend is built with the following technologies and tools:
 - **JWT (JSON Web Token):** Used for user authentication and securing API endpoints.
 
 ## Main Features
+
 **Movie Management:**
   - Easily add, edit, or delete movie information.
   - Provide full details about movies: title, description, showtimes, genres, offering a rich discovery experience.
@@ -66,6 +74,7 @@ The Movie Booking Backend is built with the following technologies and tools:
    - Strict authentication and authorization system for absolute safety.
 
 ## Project Setup
+
 #### Step 1: Clone the repository
 Open your terminal and run the following command to clone the project:
 ```bash
@@ -135,4 +144,5 @@ php artisan serve
 ```
 
 ## Support
+
 For support, please send an email to manhduc889@gmail.com.
