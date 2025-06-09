@@ -5,6 +5,7 @@
 - [Technologies Used](#technologies-used)
 - [Main Features](#main-features)
 - [Project Setup](#project-setup)
+- [FrontEnd GitHub](#frontend-github)
 - [Support](#support)
 
 ## Description
@@ -142,6 +143,10 @@ Finally, start the server with the command:
 ```bash
 php artisan serve
 ```
+
+## FrontEnd GitHub
+
+[https://github.com/Duy0605/movie_booking_be](https://github.com/chan-gio/movie_ticket)
 
 ## Support
 
