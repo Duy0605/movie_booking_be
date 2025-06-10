@@ -52,7 +52,7 @@
               <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 30px;">
                 <tr>
                   <td style="text-align: center;">
-                    <a href="{{ env('APP_URL', 'http://localhost:5173') }}/ticket/{{ $booking_id ?? '' }}" style="display: inline-block; padding: 14px 30px; background-color: #5f2eea; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 12px; transition: background-color 0.3s;">
+                    <a href="{{ env('APP_URL', 'http://localhost:5173') }}/profile" style="display: inline-block; padding: 14px 30px; background-color: #5f2eea; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 12px; transition: background-color 0.3s;">
                       View Your Ticket
                     </a>
                   </td>
