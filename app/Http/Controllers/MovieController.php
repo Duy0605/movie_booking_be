@@ -353,6 +353,14 @@ class MovieController extends Controller
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage);
 
+        if ($movies->isEmpty()) {
+            return response()->json([
+                'code' => 200,
+                'message' => 'Không có phim đang chiếu nào',
+                'data' => $movies
+            ], 200);
+        }
+
         $movies->getCollection()->transform(function ($movie) {
             $cinemas = $movie->showtimes->map(function ($showtime) {
                 return [
@@ -392,8 +400,6 @@ class MovieController extends Controller
         ], 200);
     }
 
-
-    // Lấy danh sách phim sắp chiếu
     public function getUpcomingMovie(Request $request)
     {
         $perPage = $request->input('per_page', 10);
@@ -434,6 +440,14 @@ class MovieController extends Controller
             ->select('movie_id', 'title', 'description', 'duration', 'release_date', 'director', 'cast', 'genre', 'rating', 'poster_url', 'is_deleted')
             ->paginate($perPage);
 
+        if ($movies->isEmpty()) {
+            return response()->json([
+                'code' => 200,
+                'message' => 'Không có phim sắp chiếu nào',
+                'data' => $movies
+            ], 200);
+        }
+
         $movies->getCollection()->transform(function ($movie) {
             $cinemas = $movie->showtimes->map(function ($showtime) {
                 return [
@@ -472,7 +486,6 @@ class MovieController extends Controller
             'data' => $movies
         ], 200);
     }
-
 
     // Lấy danh sách tất cả phim (bao gồm thông tin rạp và lịch chiếu)
     public function getAllMovies(Request $request)

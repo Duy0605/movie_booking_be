@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Response\ApiResponse;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
 {
@@ -33,7 +35,12 @@ class AuthController extends Controller
             'profile_picture_url' => $request->profile_picture_url ?? null,
         ]);
 
-        return ApiResponse::success($user, 'Đăng ký tài khoản thành công', 201);
+        $token = JWTAuth::fromUser($user);
+
+        return ApiResponse::success([
+            'user' => $user,
+            'token' => $token
+        ], 'Đăng ký tài khoản thành công', 201);
     }
 
     // Đăng nhập
@@ -44,26 +51,28 @@ class AuthController extends Controller
             'password' => 'required|string'
         ]);
 
-        $user = UserAccount::where('email', $request->email)
-            ->where('is_deleted', false)
-            ->first();
+        $credentials = $request->only('email', 'password');
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        try {
+            if (!$token = JWTAuth::attempt($credentials)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email hoặc mật khẩu không đúng'
+                ], 401);
+            }
+        } catch (JWTException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Email hoặc mật khẩu không đúng'
-            ], 401);
+                'message' => 'Không thể tạo token'
+            ], 500);
         }
 
-        // Tạo api_token thủ công
-        $token = Str::random(60);
-        $user->api_token = hash('sha256', $token); // Băm để bảo mật hơn
-        $user->save();
+        $user = auth()->user();
 
         return response()->json([
             'success' => true,
             'message' => 'Đăng nhập thành công',
-            'token' => $token, // Trả token gốc, không băm
+            'token' => $token,
             'user' => [
                 'user_id' => $user->user_id,
                 'username' => $user->username,
