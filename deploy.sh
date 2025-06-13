@@ -7,5 +7,8 @@ echo "Caching routes..."
 php artisan route:cache
 echo "Running migrations..."
 php artisan migrate --force
+echo "Starting PHP-FPM..."
+service php-fpm stop || true
+service php-fpm start
 echo "Checking PHP-FPM status..."
-service php-fpm status || service php-fpm start
+service php-fpm status
