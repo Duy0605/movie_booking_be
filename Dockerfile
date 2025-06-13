@@ -1,6 +1,5 @@
 FROM richarvey/nginx-php-fpm:3.1.6
 COPY . /var/www/html
-COPY conf/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY conf/nginx/nginx-site.conf /etc/nginx/conf.d/default.conf
 COPY conf/php-fpm/www.conf /etc/php/8.1/fpm/pool.d/www.conf
 ENV SKIP_COMPOSER 0
