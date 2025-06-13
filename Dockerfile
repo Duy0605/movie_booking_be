@@ -3,6 +3,7 @@ COPY . /var/www/html
 COPY conf/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY conf/nginx/nginx-site.conf /etc/nginx/conf.d/default.conf
 COPY conf/php-fpm/www.conf /etc/php/8.1/fpm/pool.d/www.conf
+ENV SKIP_COMPOSER 0
 ENV WEBROOT /var/www/html/public
 ENV PHP_ERRORS_STDERR 1
 ENV RUN_SCRIPTS 1
