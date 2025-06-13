@@ -1,25 +1,50 @@
-FROM richarvey/nginx-php-fpm:3.1.6
+FROM php:8.1-cli
 
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    nginx \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Copy application code
 COPY . /var/www/html
-COPY conf/nginx/nginx-site.conf /etc/nginx/conf.d/default.conf
-COPY conf/php-fpm/www.conf /etc/php/8.1/fpm/pool.d/www.conf
+WORKDIR /var/www/html
 
-# Image config
-ENV SKIP_COMPOSER 0
-ENV WEBROOT /var/www/html/public
-ENV PHP_ERRORS_STDERR 1
-ENV RUN_SCRIPTS 1
-ENV REAL_IP_HEADER 1
+# Copy Nginx config
+COPY conf/nginx/nginx.conf /etc/nginx/sites-available/default
+RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
-# Laravel config
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html/storage
+
+# Environment variables
 ENV APP_ENV production
 ENV APP_DEBUG false
 ENV LOG_CHANNEL stderr
 
-# Allow composer to run as root
-ENV COMPOSER_ALLOW_SUPERUSER 1
+# Install Composer dependencies
+RUN composer install --no-dev --optimize-autoloader
 
-RUN chmod +x /var/www/html/deploy.sh
-RUN /var/www/html/deploy.sh
+# Expose port 80
+EXPOSE 80
 
-CMD ["/start.sh"]
+# Copy and run deploy script
+COPY deploy.sh /deploy.sh
+RUN chmod +x /deploy.sh
+
+# Start Nginx and PHP server
+CMD ["/deploy.sh"]
