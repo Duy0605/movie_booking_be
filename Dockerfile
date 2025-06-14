@@ -31,7 +31,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN rm -rf /etc/nginx/sites-enabled/* /etc/nginx/sites-available/* /usr/share/nginx/html/*
 
 # Configure PHP-FPM
-RUN echo "[www]\nlisten = 127.0.0.1:9000\nlisten.owner = www-data\nlisten.group = www-data\npm = dynamic\npm.start_servers = 2\npm.min_spare_servers = 1\npm.max_spare_servers = 3\n" >> /usr/local/etc/php-fpm.d/www.conf
+RUN echo "[www]\nlisten = 127.0.0.1:9000\nlisten.owner = www-data\nlisten.group = www-data\npm = dynamic\npm.start_servers = 2\npm.min_spare_servers = 1\npm.max_spare_servers = 3\npm.max_children = 5\n" >> /usr/local/etc/php-fpm.d/www.conf
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
