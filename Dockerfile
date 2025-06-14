@@ -30,6 +30,9 @@ RUN composer install --no-dev --optimize-autoloader || true
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN rm -rf /etc/nginx/sites-enabled/* /usr/share/nginx/html/*
 
+# Configure PHP-FPM
+RUN echo "[www]\nlisten = 127.0.0.1:9000\n" >> /usr/local/etc/php-fpm.d/www.conf
+
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage \
@@ -38,5 +41,5 @@ RUN chown -R www-data:www-data /var/www \
 # Expose port 80 for Nginx
 EXPOSE 80
 
-# Start Nginx and PHP-FPM
-CMD ["/bin/bash", "-c", "nginx -g 'daemon off;' && php-fpm"]
+# Start Nginx and PHP-FPM with debugging
+CMD ["/bin/bash", "-c", "php-fpm -t && nginx -t && nginx -g 'daemon off;' && php-fpm"]
