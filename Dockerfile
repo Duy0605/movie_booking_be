@@ -1,47 +1,36 @@
-FROM webdevops/php-nginx:8.1
+FROM php:8.4-fpm
 
-# Update system packages to mitigate vulnerabilities
-RUN apt-get update && apt-get upgrade -y \
-    && apt-get install -y git curl zip unzip \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    redis-tools \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Ensure Composer is installed
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer --version
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy application code
-COPY . /var/www/html
-WORKDIR /var/www/html
+# Set working directory
+WORKDIR /var/www
 
-# Copy Nginx config
-COPY conf/nginx/nginx.conf /opt/docker/etc/nginx/vhost.conf
+# Copy application files
+COPY . /var/www
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader
 
 # Set permissions
-RUN chown -R application:application /var/www/html \
-    && chmod -R 755 /var/www/html/storage
+RUN chown -R www-data:www-data /var/www \
+    && chmod -R 755 /var/www/storage \
+    && chmod -R 755 /var/www/bootstrap/cache
 
-# Environment variables
-ENV WEB_DOCUMENT_ROOT=/var/www/html/public
-ENV APP_ENV=production
-ENV APP_DEBUG=false
-ENV LOG_CHANNEL=stderr
-# Disable unnecessary PHP modules to reduce vulnerabilities
-ENV PHP_DISMOD=bz2,calendar,exif,ffi,intl,gettext,ldap,imap,pdo_pgsql,pgsql,soap,sockets,sysvmsg,sysvsem,sysvshm,shmop,xsl,zip,gd,apcu,vips,yaml,imagick,mongodb,amqp
+# Expose port
+EXPOSE 9000
 
-# Increase Composer memory limit
-RUN export COMPOSER_MEMORY_LIMIT=-1
-
-# Install Composer dependencies with retries
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist || \
-    (echo "Composer install failed, retrying..." && composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist)
-
-# Expose port 80
-EXPOSE 80
-
-# Copy and run deploy script
-COPY deploy.sh /deploy.sh
-RUN chmod +x /deploy.sh
-
-# Start Nginx and PHP
-CMD ["/deploy.sh"]
+# Start PHP-FPM
+CMD ["php-fpm"]
