@@ -28,10 +28,10 @@ RUN composer install --no-dev --optimize-autoloader || true
 
 # Copy Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-RUN rm -rf /etc/nginx/sites-enabled/* /usr/share/nginx/html/*
+RUN rm -rf /etc/nginx/sites-enabled/* /etc/nginx/sites-available/* /usr/share/nginx/html/*
 
 # Configure PHP-FPM
-RUN echo "[www]\nlisten = 127.0.0.1:9000\n" >> /usr/local/etc/php-fpm.d/www.conf
+RUN echo "[www]\nlisten = 127.0.0.1:9000\nlisten.owner = www-data\nlisten.group = www-data\n" >> /usr/local/etc/php-fpm.d/www.conf
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
