@@ -26,9 +26,9 @@ COPY . /var/www
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader || true
 
-# Copy and apply Nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
-RUN rm -rf /etc/nginx/conf.d/* /etc/nginx/sites-enabled/* /usr/share/nginx/html/*
+# Copy Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN rm -rf /etc/nginx/sites-enabled/* /usr/share/nginx/html/*
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
