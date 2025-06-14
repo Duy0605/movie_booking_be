@@ -1,7 +1,5 @@
 FROM php:8.4-fpm
 
-ENV COMPOSER_ALLOW_SUPERUSER=1
-
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
@@ -15,6 +13,9 @@ RUN apt-get update && apt-get install -y \
     nginx \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Copy environment variables    
+COPY .env.production /var/www/html/.env
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -30,6 +31,9 @@ RUN composer install --no-dev --optimize-autoloader || true
 
 # Copy Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Remove default Nginx welcome page
+RUN rm -f /usr/share/nginx/html/index.html
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
