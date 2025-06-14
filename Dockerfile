@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     redis-tools \
+    nginx \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -25,13 +26,16 @@ COPY . /var/www
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader || true
 
+# Copy Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage \
     && chmod -R 755 /var/www/bootstrap/cache
 
-# Expose port
-EXPOSE 9000
+# Expose port 80 for Nginx
+EXPOSE 80
 
-# Start PHP-FPM
-CMD ["php-fpm"]
+# Start Nginx and PHP-FPM
+CMD ["/bin/bash", "-c", "nginx && php-fpm"]
