@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -27,11 +26,9 @@ COPY . /var/www
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader || true
 
-# Copy Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Remove default Nginx welcome page
-RUN rm -f /usr/share/nginx/html/index.html
+# Copy and apply Nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+RUN rm -rf /etc/nginx/conf.d/* /etc/nginx/sites-enabled/* /usr/share/nginx/html/*
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
@@ -42,4 +39,4 @@ RUN chown -R www-data:www-data /var/www \
 EXPOSE 80
 
 # Start Nginx and PHP-FPM
-CMD ["/bin/bash", "-c", "nginx && php-fpm"]
+CMD ["/bin/bash", "-c", "nginx -g 'daemon off;' && php-fpm"]
