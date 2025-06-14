@@ -14,8 +14,6 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy environment variables    
-COPY .env /var/www/html/.env
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
