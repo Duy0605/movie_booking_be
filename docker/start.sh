@@ -111,9 +111,9 @@ if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "" ]; then
         echo "Artisan key generation failed, using manual method..."
         
         # Method 2: Generate 32-byte key manually and encode properly
-        # Generate 32 random bytes and base64 encode them
-        KEY_BYTES=$(openssl rand 32)
-        KEY_BASE64=$(echo -n "$KEY_BYTES" | base64 -w 0)
+        # For AES-256-CBC, we need exactly 32 bytes (256 bits)
+        KEY_BYTES=$(openssl rand -hex 32)
+        KEY_BASE64=$(echo -n "$KEY_BYTES" | xxd -r -p | base64 -w 0)
         
         # Update the .env file with properly formatted key
         sed -i "s/APP_KEY=.*/APP_KEY=base64:$KEY_BASE64/" /var/www/.env
@@ -122,10 +122,20 @@ if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "" ]; then
     fi
 else
     echo "Using provided APP_KEY: $APP_KEY"
-    # Ensure the provided key has the correct format
+    # Ensure the provided key has the correct format and length
     if [[ ! "$APP_KEY" =~ ^base64: ]]; then
         echo "Warning: APP_KEY doesn't start with 'base64:', fixing format..."
-        sed -i "s/APP_KEY=.*/APP_KEY=base64:$APP_KEY/" /var/www/.env
+        # Convert the key to proper format if it's not already
+        if [[ "$APP_KEY" =~ ^[A-Za-z0-9+/]{43}=$ ]]; then
+            # Key is already base64 encoded but missing prefix
+            sed -i "s/APP_KEY=.*/APP_KEY=base64:$APP_KEY/" /var/www/.env
+        else
+            # Generate a new proper key
+            KEY_BYTES=$(openssl rand -hex 32)
+            KEY_BASE64=$(echo -n "$KEY_BYTES" | xxd -r -p | base64 -w 0)
+            sed -i "s/APP_KEY=.*/APP_KEY=base64:$KEY_BASE64/" /var/www/.env
+            echo "Generated new APP_KEY: base64:$KEY_BASE64"
+        fi
     fi
 fi
 
