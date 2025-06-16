@@ -14,20 +14,22 @@ services:
         value: true
       - key: APP_CIPHER
         value: AES-256-CBC
+      - key: APP_KEY
+        generateValue: true
       - key: APP_URL
-        sync: false # sẽ được set tự động bởi Render
+        sync: false # will be set automatically by Render
       - key: DB_CONNECTION
         value: mysql
       - key: DB_HOST
-        sync: false # từ Aiven console
+        sync: false # from Aiven console
       - key: DB_PORT
-        sync: false # từ Aiven console  
+        sync: false # from Aiven console  
       - key: DB_DATABASE
-        sync: false # từ Aiven console
+        sync: false # from Aiven console
       - key: DB_USERNAME
-        sync: false # từ Aiven console
+        sync: false # from Aiven console
       - key: DB_PASSWORD
-        sync: false # từ Aiven console
+        sync: false # from Aiven console
       - key: DB_SSLMODE
         value: require
       - key: MYSQL_ATTR_SSL_CA

@@ -97,35 +97,60 @@ chmod 777 /var/www/storage/framework/cache
 chmod 777 /var/www/storage/framework/sessions
 chmod 777 /var/www/storage/logs
 
-# Generate application key manually to ensure proper format
-echo "Generating app key manually..."
-KEY=$(openssl rand -base64 32)
-sed -i "s/APP_KEY=.*/APP_KEY=base64:$KEY/" /var/www/.env
+# FIX: Generate proper Laravel APP_KEY
+echo "Generating Laravel application key..."
 
-# Debug: Show generated key
-echo "APP_KEY set:"
-grep APP_KEY /var/www/.env
-
-# Verify key format and regenerate if needed
-if ! grep -q "APP_KEY=base64:" /var/www/.env; then
-    echo "Key format incorrect, fixing..."
-    KEY=$(openssl rand -base64 32)
-    echo "APP_KEY=base64:$KEY" >> /var/www/.env
+# Check if APP_KEY is already set and valid
+if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "" ]; then
+    echo "APP_KEY not provided, generating new one..."
+    
+    # Method 1: Try using Laravel's key:generate command
+    if php artisan key:generate --force --no-interaction --show 2>/dev/null; then
+        echo "Successfully generated key using artisan"
+    else
+        echo "Artisan key generation failed, using manual method..."
+        
+        # Method 2: Generate 32-byte key manually and encode properly
+        # Generate 32 random bytes and base64 encode them
+        KEY_BYTES=$(openssl rand 32)
+        KEY_BASE64=$(echo -n "$KEY_BYTES" | base64 -w 0)
+        
+        # Update the .env file with properly formatted key
+        sed -i "s/APP_KEY=.*/APP_KEY=base64:$KEY_BASE64/" /var/www/.env
+        
+        echo "Generated manual APP_KEY: base64:$KEY_BASE64"
+    fi
+else
+    echo "Using provided APP_KEY: $APP_KEY"
+    # Ensure the provided key has the correct format
+    if [[ ! "$APP_KEY" =~ ^base64: ]]; then
+        echo "Warning: APP_KEY doesn't start with 'base64:', fixing format..."
+        sed -i "s/APP_KEY=.*/APP_KEY=base64:$APP_KEY/" /var/www/.env
+    fi
 fi
 
-# Test the configuration
-echo "Testing Laravel config..."
-php artisan config:cache --no-interaction 2>&1 || {
-    echo "Config cache failed, clearing everything..."
-    php artisan config:clear --no-interaction
-    php artisan cache:clear --no-interaction
-    # Try to generate key using artisan as fallback
-    php artisan key:generate --force --no-interaction || {
-        echo "Artisan key generation also failed, using manual key"
-        KEY=$(openssl rand -base64 32)
-        sed -i "s/APP_KEY=.*/APP_KEY=base64:$KEY/" /var/www/.env
-    }
-}
+# Verify the APP_KEY is set correctly
+echo "Final APP_KEY configuration:"
+grep "APP_KEY=" /var/www/.env
+
+# Test Laravel configuration before proceeding
+echo "Testing Laravel configuration..."
+php artisan config:clear --no-interaction
+php artisan cache:clear --no-interaction
+
+# Test if the key works by trying to access config
+if php artisan tinker --execute="echo 'Key test: ' . config('app.key');" 2>/dev/null; then
+    echo "APP_KEY validation successful"
+else
+    echo "APP_KEY validation failed, trying alternative generation..."
+    
+    # Last resort: Generate a proper 256-bit key
+    # For AES-256-CBC, we need exactly 32 bytes (256 bits)
+    RANDOM_KEY=$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 -w 0)
+    sed -i "s/APP_KEY=.*/APP_KEY=base64:$RANDOM_KEY/" /var/www/.env
+    
+    echo "Used fallback key generation: base64:$RANDOM_KEY"
+fi
 
 # Run composer scripts now that .env exists
 echo "Running composer scripts..."
