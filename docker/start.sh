@@ -20,7 +20,7 @@ APP_ENV=${APP_ENV:-production}
 APP_KEY=${APP_KEY:-}
 APP_DEBUG=${APP_DEBUG:-true}
 APP_URL=${APP_URL:-http://localhost}
-APP_CIPHER=AES-256-CBC
+APP_CIPHER=${APP_CIPHER:-AES-256-CBC}
 
 LOG_CHANNEL=stack
 LOG_LEVEL=debug
@@ -63,21 +63,41 @@ SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS:-localhost}
 FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
 EOF
 
-# Set proper permissions BEFORE running Laravel commands
-echo "Setting permissions..."
+# Ensure proper ownership first
+echo "Setting ownership..."
 chown -R www:www /var/www
-chmod -R 755 /var/www/storage
-chmod -R 755 /var/www/bootstrap/cache
-chmod -R 775 /var/www/storage/logs
-chmod -R 775 /var/www/storage/framework
 
-# Generate application key with specific cipher
+# Recreate storage directories with proper permissions
+echo "Setting up storage permissions..."
+rm -rf /var/www/storage/framework/views/*
+rm -rf /var/www/storage/framework/cache/*
+rm -rf /var/www/storage/framework/sessions/*
+
+# Set proper permissions
+find /var/www/storage -type f -exec chmod 664 {} \;
+find /var/www/storage -type d -exec chmod 775 {} \;
+find /var/www/bootstrap/cache -type f -exec chmod 664 {} \;
+find /var/www/bootstrap/cache -type d -exec chmod 775 {} \;
+
+# Generate application key - remove cipher specification to use default
 echo "Generating app key..."
 php artisan key:generate --force --no-interaction
 
 # Debug: Show generated key
 echo "APP_KEY generated:"
 grep APP_KEY /var/www/.env
+
+# Check if key was generated properly and fix cipher
+if grep -q "APP_KEY=base64:" /var/www/.env; then
+    echo "Key generated successfully"
+    # Ensure we use a supported cipher
+    sed -i 's/APP_CIPHER=AES-256-CBC/APP_CIPHER=AES-256-CBC/' /var/www/.env
+else
+    echo "Key generation failed, setting manually"
+    # Generate a proper base64 key manually
+    KEY=$(openssl rand -base64 32)
+    sed -i "s/APP_KEY=.*/APP_KEY=base64:$KEY/" /var/www/.env
+fi
 
 # Run composer scripts now that .env exists
 echo "Running composer scripts..."
@@ -104,16 +124,20 @@ fi
 echo "Creating storage link..."
 php artisan storage:link --no-interaction || echo "Storage link creation failed - continuing"
 
-# Set final permissions
+# Final permission setup - ensure www user owns everything
 echo "Final permission setup..."
-chown -R www:www /var/www/storage
-chown -R www:www /var/www/bootstrap/cache
-find /var/www/storage -type f -exec chmod 664 {} \;
-find /var/www/storage -type d -exec chmod 775 {} \;
+chown -R www:www /var/www
+chmod -R 775 /var/www/storage
+chmod -R 775 /var/www/bootstrap/cache
+
+# Make sure nginx can read files
+chmod 755 /var/www
+chmod 755 /var/www/public
 
 # Debug: Show Laravel logs before starting
 echo "Checking Laravel logs..."
 touch /var/www/storage/logs/laravel.log
+chown www:www /var/www/storage/logs/laravel.log
 tail -n 20 /var/www/storage/logs/laravel.log 2>/dev/null || echo "No logs yet"
 
 echo "Starting supervisor..."

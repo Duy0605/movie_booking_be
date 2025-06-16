@@ -45,7 +45,7 @@ RUN composer install --optimize-autoloader --no-dev --no-scripts
 # Copy existing application directory contents
 COPY . /var/www
 
-# Create necessary directories with proper permissions
+# Create necessary directories with proper permissions BEFORE changing ownership
 RUN mkdir -p /var/www/storage/logs \
     /var/www/storage/framework/sessions \
     /var/www/storage/framework/views \
@@ -53,12 +53,14 @@ RUN mkdir -p /var/www/storage/logs \
     /var/www/storage/app/public \
     /var/www/bootstrap/cache
 
-# Set permissions AFTER creating directories
+# Set ownership and permissions properly
 RUN chown -R www:www /var/www \
-    && chmod -R 755 /var/www/storage \
-    && chmod -R 755 /var/www/bootstrap/cache \
-    && chmod -R 775 /var/www/storage/logs \
-    && chmod -R 775 /var/www/storage/framework
+    && find /var/www/storage -type f -exec chmod 664 {} \; \
+    && find /var/www/storage -type d -exec chmod 775 {} \; \
+    && find /var/www/bootstrap/cache -type f -exec chmod 664 {} \; \
+    && find /var/www/bootstrap/cache -type d -exec chmod 775 {} \; \
+    && chmod -R 775 /var/www/storage \
+    && chmod -R 775 /var/www/bootstrap/cache
 
 # Copy nginx config
 COPY docker/nginx.conf /etc/nginx/nginx.conf

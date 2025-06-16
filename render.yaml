@@ -31,7 +31,7 @@ services:
       - key: DB_SSLMODE
         value: require
       - key: MYSQL_ATTR_SSL_CA
-        value: /var/www/ca.pem
+        value: /var/www/docker/ca.pem
       - key: MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
         value: true
       - key: FRONTEND_URL
