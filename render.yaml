@@ -30,8 +30,10 @@ services:
         sync: false # từ Aiven console
       - key: DB_SSLMODE
         value: require
+      - key: MYSQL_ATTR_SSL_CA
+        value: /var/www/ca.pem
       - key: MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
-        value: false
+        value: true
       - key: FRONTEND_URL
         value: https://movie-ticket-murex.vercel.app
       - key: SANCTUM_STATEFUL_DOMAINS
