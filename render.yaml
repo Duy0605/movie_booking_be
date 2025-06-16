@@ -15,7 +15,7 @@ services:
       - key: APP_URL
         sync: false # sẽ được set tự động bởi Render
       - key: DB_CONNECTION
-        value: mysql # hoặc pgsql
+        value: mysql
       - key: DB_HOST
         sync: false # từ Aiven console
       - key: DB_PORT
