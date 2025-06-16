@@ -69,35 +69,59 @@ chown -R www:www /var/www
 
 # Recreate storage directories with proper permissions
 echo "Setting up storage permissions..."
+mkdir -p /var/www/storage/framework/views
+mkdir -p /var/www/storage/framework/cache/data
+mkdir -p /var/www/storage/framework/sessions
+mkdir -p /var/www/storage/logs
+mkdir -p /var/www/bootstrap/cache
+
+# Clear old cache files that might have wrong permissions
 rm -rf /var/www/storage/framework/views/*
 rm -rf /var/www/storage/framework/cache/*
 rm -rf /var/www/storage/framework/sessions/*
+rm -rf /var/www/bootstrap/cache/*
 
-# Set proper permissions
-find /var/www/storage -type f -exec chmod 664 {} \;
-find /var/www/storage -type d -exec chmod 775 {} \;
-find /var/www/bootstrap/cache -type f -exec chmod 664 {} \;
-find /var/www/bootstrap/cache -type d -exec chmod 775 {} \;
+# Set proper permissions with more specific approach
+chmod -R 775 /var/www/storage
+chmod -R 775 /var/www/bootstrap/cache
+chown -R www:www /var/www/storage
+chown -R www:www /var/www/bootstrap/cache
 
-# Generate application key - remove cipher specification to use default
-echo "Generating app key..."
-php artisan key:generate --force --no-interaction
+# Ensure specific directories have write permissions
+chmod 777 /var/www/storage/framework/views
+chmod 777 /var/www/storage/framework/cache
+chmod 777 /var/www/storage/framework/sessions
+chmod 777 /var/www/storage/logs
+
+# Generate application key manually to ensure proper format
+echo "Generating app key manually..."
+KEY=$(openssl rand -base64 32)
+sed -i "s/APP_KEY=.*/APP_KEY=base64:$KEY/" /var/www/.env
 
 # Debug: Show generated key
-echo "APP_KEY generated:"
+echo "APP_KEY set:"
 grep APP_KEY /var/www/.env
 
-# Check if key was generated properly and fix cipher
-if grep -q "APP_KEY=base64:" /var/www/.env; then
-    echo "Key generated successfully"
-    # Ensure we use a supported cipher
-    sed -i 's/APP_CIPHER=AES-256-CBC/APP_CIPHER=AES-256-CBC/' /var/www/.env
-else
-    echo "Key generation failed, setting manually"
-    # Generate a proper base64 key manually
+# Verify key format and regenerate if needed
+if ! grep -q "APP_KEY=base64:" /var/www/.env; then
+    echo "Key format incorrect, fixing..."
     KEY=$(openssl rand -base64 32)
-    sed -i "s/APP_KEY=.*/APP_KEY=base64:$KEY/" /var/www/.env
+    echo "APP_KEY=base64:$KEY" >> /var/www/.env
 fi
+
+# Test the configuration
+echo "Testing Laravel config..."
+php artisan config:cache --no-interaction 2>&1 || {
+    echo "Config cache failed, clearing everything..."
+    php artisan config:clear --no-interaction
+    php artisan cache:clear --no-interaction
+    # Try to generate key using artisan as fallback
+    php artisan key:generate --force --no-interaction || {
+        echo "Artisan key generation also failed, using manual key"
+        KEY=$(openssl rand -base64 32)
+        sed -i "s/APP_KEY=.*/APP_KEY=base64:$KEY/" /var/www/.env
+    }
+}
 
 # Run composer scripts now that .env exists
 echo "Running composer scripts..."
