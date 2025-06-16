@@ -1,3 +1,6 @@
+#!/bin/sh
+# docker/start.sh
+
 # Create necessary directories
 mkdir -p /var/log/supervisor /var/log/nginx
 
@@ -15,7 +18,7 @@ cat > /var/www/.env << EOF
 APP_NAME=${APP_NAME:-Laravel}
 APP_ENV=${APP_ENV:-production}
 APP_KEY=${APP_KEY:-}
-APP_DEBUG=${APP_DEBUG:-false}
+APP_DEBUG=${APP_DEBUG:-true}
 APP_URL=${APP_URL:-http://localhost}
 
 LOG_CHANNEL=stack
@@ -56,19 +59,45 @@ SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS:-localhost}
 FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
 EOF
 
+# Set proper permissions
+chown -R www:www /var/www
+chmod -R 755 /var/www/storage
+chmod -R 755 /var/www/bootstrap/cache
+
 # Generate application key if not exists
-if [ -z "$APP_KEY" ]; then
-    php artisan key:generate --force
-fi
+echo "Generating app key..."
+php artisan key:generate --force --no-interaction
+
+# Debug: Show generated key
+echo "APP_KEY generated:"
+grep APP_KEY /var/www/.env
 
 # Run composer scripts now that .env exists
-composer run-script post-autoload-dump
+echo "Running composer scripts..."
+composer run-script post-autoload-dump --no-interaction
 
 # Clear and cache config
-php artisan config:clear
-php artisan cache:clear
-php artisan route:clear
-php artisan view:clear
+echo "Clearing caches..."
+php artisan config:clear --no-interaction
+php artisan cache:clear --no-interaction
+php artisan route:clear --no-interaction
+php artisan view:clear --no-interaction
 
+# Try to run a simple artisan command to test
+echo "Testing artisan..."
+php artisan --version
+
+# Check if we can connect to database (optional, only if DB vars are set)
+if [ ! -z "$DB_HOST" ]; then
+    echo "Testing database connection..."
+    php artisan migrate:status || echo "Database connection failed - continuing anyway"
+fi
+
+# Debug: Show Laravel logs before starting
+echo "Checking Laravel logs..."
+touch /var/www/storage/logs/laravel.log
+tail -n 20 /var/www/storage/logs/laravel.log || echo "No logs yet"
+
+echo "Starting supervisor..."
 # Start supervisor
 exec /usr/bin/supervisord -c /etc/supervisor.d/supervisord.ini

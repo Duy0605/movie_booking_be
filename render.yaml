@@ -11,7 +11,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: false
+        value: true # Enable debug temporarily
       - key: APP_URL
         sync: false # sẽ được set tự động bởi Render
       - key: DB_CONNECTION
