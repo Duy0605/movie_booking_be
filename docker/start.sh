@@ -1,5 +1,14 @@
-#!/bin/sh
-# docker/start.sh
+# Create necessary directories
+mkdir -p /var/log/supervisor /var/log/nginx
+
+# Debug: Check if PHP-FPM exists
+echo "Checking PHP-FPM..."
+which php-fpm
+php-fpm --version
+
+# Debug: Check nginx config
+echo "Testing nginx config..."
+nginx -t
 
 # Create .env file from environment variables
 cat > /var/www/.env << EOF

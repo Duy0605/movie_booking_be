@@ -30,6 +30,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN addgroup -g 1000 www && \
     adduser -u 1000 -G www -s /bin/sh -D www
 
+# Create supervisor log directory and nginx log directory
+RUN mkdir -p /var/log/supervisor /var/log/nginx
+
 # Set working directory
 WORKDIR /var/www
 
