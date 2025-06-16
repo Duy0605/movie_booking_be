@@ -12,7 +12,7 @@ class Cors
         $response = $next($request);
 
         // Add CORS headers
-        $response->headers->set('Access-Control-Allow-Origin', 'http://localhost:5173, https://movie-ticket-murex.vercel.app/, https://movie-ticket-murex.vercel.app');
+        $response->headers->set('Access-Control-Allow-Origin', 'https://movie-ticket-murex.vercel.app');
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
         $response->headers->set('Access-Control-Allow-Credentials', 'true');
