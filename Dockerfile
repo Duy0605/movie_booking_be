@@ -14,14 +14,17 @@ RUN apk add --no-cache \
     supervisor \
     mysql-client \
     freetype-dev \
-    libjpeg-turbo-dev
+    libjpeg-turbo-dev \
+    libpng \
+    freetype \
+    libjpeg-turbo
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Clear cache
-RUN apk del --purge libpng-dev oniguruma-dev libxml2-dev freetype-dev libjpeg-turbo-dev
+# Don't remove the libraries needed at runtime
+# RUN apk del --purge libpng-dev oniguruma-dev libxml2-dev freetype-dev libjpeg-turbo-dev
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
