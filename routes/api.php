@@ -25,6 +25,7 @@ Route::prefix('auth')->group(function () {
 // Các route công khai (không yêu cầu JWT)
 Route::prefix('movies')->group(function () {
     Route::get('/', [MovieController::class, 'index']);                    // Lấy danh sách tất cả phim
+    Route::get('/get-all-movies', [MovieController::class, 'getAllMovies']);    // Lấy danh sách tất cả phim (bao gồm đã xóa mềm)
     Route::get('/search', [MovieController::class, 'searchByTitleFE']);    // Tìm kiếm phim theo tiêu đề (frontend)
     Route::get('/now-showing', [MovieController::class, 'getNowShowing']); // Lấy danh sách phim đang chiếu
     Route::get('/upcoming-movie', [MovieController::class, 'getUpcomingMovie']); // Lấy danh sách phim sắp chiếu
@@ -124,7 +125,6 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/soft/{id}', [MovieController::class, 'destroy']);           // Xóa mềm phim
         Route::patch('/restore/{id}', [MovieController::class, 'restore']);         // Khôi phục phim đã bị xóa mềm
         Route::get('/deleted', [MovieController::class, 'getDeletedMovies']);       // Lấy danh sách phim đã xóa mềm
-        Route::get('/get-all-movies', [MovieController::class, 'getAllMovies']);    // Lấy danh sách tất cả phim (bao gồm đã xóa mềm)
     });
 
     // ShowTime
