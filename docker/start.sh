@@ -2,12 +2,16 @@
 # docker/start.sh
 
 # Create necessary directories
-mkdir -p /var/log/supervisor /var/log/nginx
+mkdir -p /var/log/supervisor /var/log/nginx /run/php
+
+# Ensure PHP-FPM can create socket
+chown www:www /run/php
 
 # Debug: Check if PHP-FPM exists
 echo "Checking PHP-FPM..."
 which php-fpm
 php-fpm --version
+php-fpm -t
 
 # Debug: Check nginx config
 echo "Testing nginx config..."
