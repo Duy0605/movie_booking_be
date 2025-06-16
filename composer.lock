@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c473a263c54c7b53df512237ac9b0ac1",
+    "content-hash": "07c73c5dd199b9cf979408e7f583685f",
     "packages": [
         {
             "name": "brick/math",
@@ -5862,16 +5862,16 @@
         },
         {
             "name": "tymon/jwt-auth",
-            "version": "2.2.1",
+            "version": "2.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/tymondesigns/jwt-auth.git",
-                "reference": "42381e56db1bf887c12e5302d11901d65cc74856"
+                "reference": "6c98cea2c3f11a71c0c7f982dd2d76e64247ee28"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tymondesigns/jwt-auth/zipball/42381e56db1bf887c12e5302d11901d65cc74856",
-                "reference": "42381e56db1bf887c12e5302d11901d65cc74856",
+                "url": "https://api.github.com/repos/tymondesigns/jwt-auth/zipball/6c98cea2c3f11a71c0c7f982dd2d76e64247ee28",
+                "reference": "6c98cea2c3f11a71c0c7f982dd2d76e64247ee28",
                 "shasum": ""
             },
             "require": {
@@ -5942,7 +5942,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2025-04-16T22:22:54+00:00"
+            "time": "2025-02-28T08:14:11+00:00"
         },
         {
             "name": "vlucas/phpdotenv",

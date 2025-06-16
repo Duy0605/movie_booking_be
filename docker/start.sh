@@ -64,7 +64,7 @@ PUSHER_SCHEME=${PUSHER_SCHEME:-https}
 PUSHER_APP_CLUSTER=${PUSHER_APP_CLUSTER:-mt1}
 
 SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS:-localhost}
-FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+FRONTEND_URL=${FRONTEND_URL:-https://movie-ticket-murex.vercel.app}
 EOF
 
 # Ensure proper ownership first
