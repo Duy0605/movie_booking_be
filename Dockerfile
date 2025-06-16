@@ -23,9 +23,6 @@ RUN apk add --no-cache \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Don't remove the libraries needed at runtime
-# RUN apk del --purge libpng-dev oniguruma-dev libxml2-dev freetype-dev libjpeg-turbo-dev
-
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -42,28 +39,26 @@ WORKDIR /var/www
 # Copy composer files first
 COPY composer.json composer.lock /var/www/
 
-# Set working directory for composer
-WORKDIR /var/www
-
 # Install dependencies without running scripts to avoid env issues
 RUN composer install --optimize-autoloader --no-dev --no-scripts
 
 # Copy existing application directory contents
 COPY . /var/www
 
-# Copy existing application directory permissions
-COPY --chown=www:www . /var/www
+# Create necessary directories with proper permissions
+RUN mkdir -p /var/www/storage/logs \
+    /var/www/storage/framework/sessions \
+    /var/www/storage/framework/views \
+    /var/www/storage/framework/cache \
+    /var/www/storage/app/public \
+    /var/www/bootstrap/cache
 
-# Create necessary directories
-RUN mkdir -p /var/www/storage/logs
-RUN mkdir -p /var/www/storage/framework/sessions
-RUN mkdir -p /var/www/storage/framework/views
-RUN mkdir -p /var/www/storage/framework/cache
-
-# Set permissions
-RUN chown -R www:www /var/www
-RUN chmod -R 755 /var/www/storage
-RUN chmod -R 755 /var/www/bootstrap/cache
+# Set permissions AFTER creating directories
+RUN chown -R www:www /var/www \
+    && chmod -R 755 /var/www/storage \
+    && chmod -R 755 /var/www/bootstrap/cache \
+    && chmod -R 775 /var/www/storage/logs \
+    && chmod -R 775 /var/www/storage/framework
 
 # Copy nginx config
 COPY docker/nginx.conf /etc/nginx/nginx.conf

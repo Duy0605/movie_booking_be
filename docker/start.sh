@@ -20,6 +20,7 @@ APP_ENV=${APP_ENV:-production}
 APP_KEY=${APP_KEY:-}
 APP_DEBUG=${APP_DEBUG:-true}
 APP_URL=${APP_URL:-http://localhost}
+APP_CIPHER=AES-256-CBC
 
 LOG_CHANNEL=stack
 LOG_LEVEL=debug
@@ -30,6 +31,9 @@ DB_PORT=${DB_PORT:-3306}
 DB_DATABASE=${DB_DATABASE:-laravel}
 DB_USERNAME=${DB_USERNAME:-root}
 DB_PASSWORD=${DB_PASSWORD:-}
+DB_SSLMODE=${DB_SSLMODE:-require}
+MYSQL_ATTR_SSL_CA=${MYSQL_ATTR_SSL_CA:-}
+MYSQL_ATTR_SSL_VERIFY_SERVER_CERT=${MYSQL_ATTR_SSL_VERIFY_SERVER_CERT:-false}
 
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.gmail.com
@@ -59,12 +63,15 @@ SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS:-localhost}
 FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
 EOF
 
-# Set proper permissions
+# Set proper permissions BEFORE running Laravel commands
+echo "Setting permissions..."
 chown -R www:www /var/www
 chmod -R 755 /var/www/storage
 chmod -R 755 /var/www/bootstrap/cache
+chmod -R 775 /var/www/storage/logs
+chmod -R 775 /var/www/storage/framework
 
-# Generate application key if not exists
+# Generate application key with specific cipher
 echo "Generating app key..."
 php artisan key:generate --force --no-interaction
 
@@ -78,25 +85,36 @@ composer run-script post-autoload-dump --no-interaction
 
 # Clear and cache config
 echo "Clearing caches..."
-php artisan config:clear --no-interaction
-php artisan cache:clear --no-interaction
-php artisan route:clear --no-interaction
-php artisan view:clear --no-interaction
+php artisan config:clear --no-interaction || echo "Config clear failed - continuing"
+php artisan cache:clear --no-interaction || echo "Cache clear failed - continuing"
+php artisan route:clear --no-interaction || echo "Route clear failed - continuing"  
+php artisan view:clear --no-interaction || echo "View clear failed - continuing"
 
 # Try to run a simple artisan command to test
 echo "Testing artisan..."
 php artisan --version
 
-# Check if we can connect to database (optional, only if DB vars are set)
+# Test database connection with better error handling
 if [ ! -z "$DB_HOST" ]; then
     echo "Testing database connection..."
-    php artisan migrate:status || echo "Database connection failed - continuing anyway"
+    php artisan migrate:status 2>&1 || echo "Database connection failed - this is expected if DB is not ready"
 fi
+
+# Create storage link
+echo "Creating storage link..."
+php artisan storage:link --no-interaction || echo "Storage link creation failed - continuing"
+
+# Set final permissions
+echo "Final permission setup..."
+chown -R www:www /var/www/storage
+chown -R www:www /var/www/bootstrap/cache
+find /var/www/storage -type f -exec chmod 664 {} \;
+find /var/www/storage -type d -exec chmod 775 {} \;
 
 # Debug: Show Laravel logs before starting
 echo "Checking Laravel logs..."
 touch /var/www/storage/logs/laravel.log
-tail -n 20 /var/www/storage/logs/laravel.log || echo "No logs yet"
+tail -n 20 /var/www/storage/logs/laravel.log 2>/dev/null || echo "No logs yet"
 
 echo "Starting supervisor..."
 # Start supervisor

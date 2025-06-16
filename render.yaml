@@ -4,14 +4,16 @@ services:
     name: movie-ticket-api
     env: docker
     dockerfilePath: ./Dockerfile
-    plan: starter # hoặc plan phù hợp
+    plan: starter
     envVars:
       - key: APP_NAME
         value: MovieTicketAPI
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: true # Enable debug temporarily
+        value: true
+      - key: APP_CIPHER
+        value: AES-256-CBC
       - key: APP_URL
         sync: false # sẽ được set tự động bởi Render
       - key: DB_CONNECTION
@@ -19,13 +21,17 @@ services:
       - key: DB_HOST
         sync: false # từ Aiven console
       - key: DB_PORT
-        sync: false # từ Aiven console
+        sync: false # từ Aiven console  
       - key: DB_DATABASE
         sync: false # từ Aiven console
       - key: DB_USERNAME
         sync: false # từ Aiven console
       - key: DB_PASSWORD
         sync: false # từ Aiven console
+      - key: DB_SSLMODE
+        value: require
+      - key: MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
+        value: false
       - key: FRONTEND_URL
         value: https://movie-ticket-murex.vercel.app
       - key: SANCTUM_STATEFUL_DOMAINS
