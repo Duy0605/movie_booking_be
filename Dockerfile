@@ -1,48 +1,66 @@
-FROM php:8.4-fpm
+# Dockerfile
+FROM php:8.2-fpm-alpine
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     git \
     curl \
     libpng-dev \
-    libonig-dev \
+    oniguruma-dev \
     libxml2-dev \
     zip \
     unzip \
-    redis-tools \
     nginx \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    supervisor \
+    mysql-client \
+    postgresql-dev
 
-# Install Composer
+# Clear cache
+RUN apk del --purge *-dev
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd
+
+# Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Create system user to run Composer and Artisan Commands
+RUN addgroup -g 1000 www && \
+    adduser -u 1000 -G www -s /bin/sh -D www
 
 # Set working directory
 WORKDIR /var/www
 
-# Copy application files
+# Copy existing application directory contents
 COPY . /var/www
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader || true
+# Copy existing application directory permissions
+COPY --chown=www:www . /var/www
 
-# Copy Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-RUN rm -rf /etc/nginx/sites-enabled/* /etc/nginx/sites-available/* /usr/share/nginx/html/*
+# Install dependencies
+RUN composer install --optimize-autoloader --no-dev
 
-# Configure PHP-FPM
-RUN echo "[www]\nuser = www-data\ngroup = www-data\nlisten = /var/run/php/php8.4-fpm.sock\nlisten.owner = www-data\nlisten.group = www-data\nlisten.mode = 0660\npm = dynamic\npm.start_servers = 2\npm.min_spare_servers = 1\npm.max_spare_servers = 3\npm.max_children = 5\n" > /usr/local/etc/php-fpm.d/www.conf
+# Create necessary directories
+RUN mkdir -p /var/www/storage/logs
+RUN mkdir -p /var/www/storage/framework/sessions
+RUN mkdir -p /var/www/storage/framework/views
+RUN mkdir -p /var/www/storage/framework/cache
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage \
-    && chmod -R 755 /var/www/bootstrap/cache \
-    && mkdir -p /var/run/php \
-    && chown www-data:www-data /var/run/php \
-    && chmod 755 /var/run/php
+RUN chown -R www:www /var/www
+RUN chmod -R 755 /var/www/storage
+RUN chmod -R 755 /var/www/bootstrap/cache
 
-# Expose port 80 for Nginx
+# Copy nginx config
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+
+# Copy supervisor config
+COPY docker/supervisord.conf /etc/supervisor.d/supervisord.ini
+
+# Copy startup script
+COPY docker/start.sh /start.sh
+RUN chmod +x /start.sh
+
 EXPOSE 80
 
-# Start Nginx and PHP-FPM with debugging
-CMD ["/bin/bash", "-c", "php-fpm -t && nginx -t && nginx -g 'daemon off;' && php-fpm"]
+CMD ["/start.sh"]

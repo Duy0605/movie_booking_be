@@ -1,0 +1,32 @@
+# render.yaml
+services:
+  - type: web
+    name: movie-ticket-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter # hoặc plan phù hợp
+    envVars:
+      - key: APP_NAME
+        value: MovieTicketAPI
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        sync: false # sẽ được set tự động bởi Render
+      - key: DB_CONNECTION
+        value: mysql # hoặc pgsql
+      - key: DB_HOST
+        sync: false # từ Aiven console
+      - key: DB_PORT
+        sync: false # từ Aiven console
+      - key: DB_DATABASE
+        sync: false # từ Aiven console
+      - key: DB_USERNAME
+        sync: false # từ Aiven console
+      - key: DB_PASSWORD
+        sync: false # từ Aiven console
+      - key: FRONTEND_URL
+        value: https://movie-ticket-murex.vercel.app
+      - key: SANCTUM_STATEFUL_DOMAINS
+        value: movie-ticket-murex.vercel.app
