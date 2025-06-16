@@ -33,14 +33,20 @@ RUN addgroup -g 1000 www && \
 # Set working directory
 WORKDIR /var/www
 
+# Copy composer files first
+COPY composer.json composer.lock /var/www/
+
+# Set working directory for composer
+WORKDIR /var/www
+
+# Install dependencies without running scripts to avoid env issues
+RUN composer install --optimize-autoloader --no-dev --no-scripts
+
 # Copy existing application directory contents
 COPY . /var/www
 
 # Copy existing application directory permissions
 COPY --chown=www:www . /var/www
-
-# Install dependencies
-RUN composer install --optimize-autoloader --no-dev
 
 # Create necessary directories
 RUN mkdir -p /var/www/storage/logs
