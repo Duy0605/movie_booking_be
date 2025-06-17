@@ -59,6 +59,10 @@ Route::prefix('setting')->group(function () {
     Route::get('/', [SettingController::class, 'show']);                        // Lấy thông tin cài đặt
 });
 
+  Route::prefix('users')->group(function () {
+        Route::post('/forgot-password', [UserAccountController::class, 'forgotPassword']); // Quên mật khẩu
+    });
+
 // Các route yêu cầu xác thực JWT - THAY ĐỔI middleware từ 'auth:api' thành 'jwt.auth'
 Route::middleware('jwt.auth')->group(function () {
     // Dashboard
@@ -199,7 +203,6 @@ Route::middleware('jwt.auth')->group(function () {
         Route::patch('/restore/{id}', [UserAccountController::class, 'restore']);   // Khôi phục người dùng
         Route::delete('/{id}', [UserAccountController::class, 'forceDelete']);      // Xoá vĩnh viễn người dùng
         Route::post('/{id}/change-password', [UserAccountController::class, 'changePassword']); // Đổi mật khẩu người dùng
-        Route::post('/forgot-password', [UserAccountController::class, 'forgotPassword']); // Quên mật khẩu
     });
 
     // Setting
