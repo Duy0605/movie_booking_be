@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']); // Đăng ký người dùng
     Route::post('/login', [AuthController::class, 'login']);       // Đăng nhập người dùng
+    Route::post('/logout', [AuthController::class, 'logout'])->middleware('jwt.auth');      // Đăng xuất người dùng
+    Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('jwt.auth');    // Refresh token
 });
 
 // Các route công khai (không yêu cầu JWT)
@@ -57,8 +59,8 @@ Route::prefix('setting')->group(function () {
     Route::get('/', [SettingController::class, 'show']);                        // Lấy thông tin cài đặt
 });
 
-// Các route yêu cầu xác thực JWT
-Route::middleware('auth:api')->group(function () {
+// Các route yêu cầu xác thực JWT - THAY ĐỔI middleware từ 'auth:api' thành 'jwt.auth'
+Route::middleware('jwt.auth')->group(function () {
     // Dashboard
     Route::prefix('dashboard')->group(function () {
         Route::get('/', [DashboardController::class, 'getDashboardData']); // Lấy dữ liệu cho Admin Dashboard

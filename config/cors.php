@@ -33,7 +33,7 @@ return [
     | Dùng ['*'] để cho phép tất cả, hoặc chỉ định như: ['http://localhost:3000']
     |
     */
-    'allowed_origins' => ['https://movie-ticket-murex.vercel.app'],
+    'allowed_origins' => ['*'],
 
     /*
     |--------------------------------------------------------------------------

@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class UserAccount extends Authenticatable implements JWTSubject
 {
-    use HasFactory, Notifiable;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'user_account';
     protected $primaryKey = 'user_id';
@@ -23,32 +23,23 @@ class UserAccount extends Authenticatable implements JWTSubject
         'password',
         'full_name',
         'dob',
-        'profile_picture_url',
         'phone',
-        'role',
-        'is_deleted',
+        'profile_picture_url',
     ];
 
     protected $hidden = [
         'password',
+        'remember_token',
     ];
 
     protected $casts = [
-        'is_deleted' => 'boolean',
-        'dob' => 'datetime',
-        'password' => 'hashed',
+        'email_verified_at' => 'datetime',
+        'dob' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    public function bookings()
-    {
-        return $this->hasMany(Booking::class, 'user_id', 'user_id');
-    }
-
-    public function reviews()
-    {
-        return $this->hasMany(Review::class, 'user_id', 'user_id');
-    }
-
+    // JWT Methods
     public function getJWTIdentifier()
     {
         return $this->getKey();
@@ -57,5 +48,16 @@ class UserAccount extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [];
+    }
+
+    // Relationships
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'user_id', 'user_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'user_id', 'user_id');
     }
 }

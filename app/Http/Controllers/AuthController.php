@@ -5,14 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\UserAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use App\Response\ApiResponse;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use App\Response\ApiResponse;
 
 class AuthController extends Controller
 {
-    // Đăng ký tài khoản
     public function register(Request $request)
     {
         $request->validate([
@@ -24,26 +24,40 @@ class AuthController extends Controller
             'phone' => 'required|string|max:15|unique:user_account,phone',
         ]);
 
-        $user = UserAccount::create([
-            'user_id' => Str::uuid(),
-            'username' => $request->username,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'full_name' => $request->full_name,
-            'dob' => $request->dob,
-            'phone' => $request->phone,
-            'profile_picture_url' => $request->profile_picture_url ?? null,
-        ]);
+        try {
+            $user = UserAccount::create([
+                'user_id' => Str::uuid(),
+                'username' => $request->username,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'full_name' => $request->full_name,
+                'dob' => $request->dob,
+                'phone' => $request->phone,
+                'profile_picture_url' => $request->profile_picture_url ?? null,
+            ]);
 
-        $token = JWTAuth::fromUser($user);
+            $token = JWTAuth::fromUser($user);
 
-        return ApiResponse::success([
-            'user' => $user,
-            'token' => $token
-        ], 'Đăng ký tài khoản thành công', 201);
+            return ApiResponse::success([
+                'user' => [
+                    'user_id' => $user->user_id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'full_name' => $user->full_name,
+                    'dob' => $user->dob,
+                    'phone' => $user->phone,
+                    'profile_picture_url' => $user->profile_picture_url
+                ],
+                'access_token' => $token,
+                'refresh_token' => $token // Same token for simplicity
+            ], 'Đăng ký tài khoản thành công', 201);
+        } catch (JWTException $e) {
+            return ApiResponse::error('Không thể tạo token: ' . $e->getMessage(), 500);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Đăng ký thất bại: ' . $e->getMessage(), 500);
+        }
     }
 
-    // Đăng nhập
     public function login(Request $request)
     {
         $request->validate([
@@ -55,33 +69,52 @@ class AuthController extends Controller
 
         try {
             if (!$token = JWTAuth::attempt($credentials)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Email hoặc mật khẩu không đúng'
-                ], 401);
+                return ApiResponse::error('Email hoặc mật khẩu không đúng', 401);
             }
+
+            $user = Auth::user();
+            $refreshToken = JWTAuth::fromUser($user); // Same token for refresh
+
+            return ApiResponse::success([
+                'access_token' => $token,
+                'refresh_token' => $refreshToken,
+                'user' => [
+                    'user_id' => $user->user_id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'full_name' => $user->full_name,
+                    'dob' => $user->dob,
+                    'phone' => $user->phone,
+                    'profile_picture_url' => $user->profile_picture_url
+                ]
+            ], 'Đăng nhập thành công');
         } catch (JWTException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Không thể tạo token'
-            ], 500);
+            return ApiResponse::error('Không thể tạo token: ' . $e->getMessage(), 500);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Đăng nhập thất bại: ' . $e->getMessage(), 500);
         }
+    }
 
-        $user = auth()->user();
+    public function logout()
+    {
+        try {
+            JWTAuth::invalidate(JWTAuth::getToken());
+            return ApiResponse::success(null, 'Đăng xuất thành công');
+        } catch (JWTException $e) {
+            return ApiResponse::error('Đăng xuất thất bại: ' . $e->getMessage(), 500);
+        }
+    }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Đăng nhập thành công',
-            'token' => $token,
-            'user' => [
-                'user_id' => $user->user_id,
-                'username' => $user->username,
-                'email' => $user->email,
-                'full_name' => $user->full_name,
-                'dob' => $user->dob,
-                'phone' => $user->phone,
-                'profile_picture_url' => $user->profile_picture_url
-            ]
-        ]);
+    public function refresh(Request $request)
+    {
+        try {
+            $newToken = JWTAuth::refresh(JWTAuth::getToken());
+            return ApiResponse::success([
+                'access_token' => $newToken,
+                'refresh_token' => $newToken // Same token for simplicity
+            ], 'Làm mới token thành công');
+        } catch (JWTException $e) {
+            return ApiResponse::error('Không thể làm mới token: ' . $e->getMessage(), 401);
+        }
     }
 }
