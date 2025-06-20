@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use App\Response\ApiResponse;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class SeatController extends Controller
 {
@@ -245,8 +246,8 @@ class SeatController extends Controller
             if (!empty($seatsToCreate)) {
                 try {
                     Seat::insert($seatsToCreate);
-                } catch (QueryException $e) {
-                    throw new QueryException(
+                } catch (\Illuminate\Database\QueryException $e) {
+                    throw new \Illuminate\Database\QueryException(
                         $e->getCode(),
                         "Lỗi khi chèn hàng loạt ghế: " . $e->getMessage(),
                         $e->getBindings(),
@@ -276,25 +277,42 @@ class SeatController extends Controller
                 201
             );
 
-        } catch (QueryException $e) {
+        } catch (\Illuminate\Database\QueryException $e) {
             DB::rollBack();
             // Ghi log chi tiết lỗi
             Log::error('Failed to store multiple seats', [
                 'error' => $e->getMessage(),
-                'sql' => $e->getSql(),
-                'bindings' => $e->getBindings(),
+                'sql' => method_exists($e, 'getSql') ? $e->getSql() : null,
+                'bindings' => method_exists($e, 'getBindings') ? $e->getBindings() : null,
                 'request_data' => $request->all(),
                 'seats_to_create' => $seatsToCreate,
                 'seats_to_restore' => array_map(function ($seat) { return $seat->toArray(); }, $seatsToRestore),
             ]);
 
+            $debug = config('app.debug');
+            $errorResponse = [
+                'message' => 'Lỗi khi xử lý ghế: ' . $e->getMessage(),
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5);
+                if (method_exists($e, 'getSql')) {
+                    $errorResponse['sql'] = $e->getSql();
+                }
+                if (method_exists($e, 'getBindings')) {
+                    $errorResponse['bindings'] = $e->getBindings();
+                }
+            }
+
             // Kiểm tra lỗi khóa ngoại
             if (str_contains($e->getMessage(), 'foreign key constraint fails')) {
-                return ApiResponse::error('Room ID không tồn tại hoặc không hợp lệ.', 422);
+                $errorResponse['message'] = 'Room ID không tồn tại hoặc không hợp lệ.';
+                return response()->json($errorResponse, 422);
             }
 
             // Trả về lỗi chi tiết
-            return ApiResponse::error('Lỗi khi xử lý ghế: ' . $e->getMessage(), 500);
+            return response()->json($errorResponse, 500);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -305,8 +323,16 @@ class SeatController extends Controller
                 'seats_to_create' => $seatsToCreate,
                 'seats_to_restore' => array_map(function ($seat) { return $seat->toArray(); }, $seatsToRestore),
             ]);
-
-            return ApiResponse::error('Lỗi không xác định: ' . $e->getMessage(), 500);
+            $debug = config('app.debug');
+            $errorResponse = [
+                'message' => 'Lỗi không xác định: ' . $e->getMessage(),
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5);
+            }
+            return response()->json($errorResponse, 500);
         }
     }
 

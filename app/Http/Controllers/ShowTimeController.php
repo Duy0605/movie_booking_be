@@ -182,15 +182,32 @@ class ShowTimeController extends Controller
                 'data' => $showtime
             ], 201);
 
-        } catch (QueryException $e) {
+        } catch (\Illuminate\Database\QueryException $e) {
             \DB::rollBack();
             // Ghi log chi tiết lỗi
-            Log::error('Failed to create showtime', [
+            \Log::error('Failed to create showtime', [
                 'error' => $e->getMessage(),
-                'sql' => $e->getSql(),
-                'bindings' => $e->getBindings(),
+                'sql' => method_exists($e, 'getSql') ? $e->getSql() : null,
+                'bindings' => method_exists($e, 'getBindings') ? $e->getBindings() : null,
                 'request_data' => $request->all(),
             ]);
+
+            $debug = config('app.debug');
+            $errorResponse = [
+                'code' => 500,
+                'message' => 'Lỗi cơ sở dữ liệu: ' . $e->getMessage(),
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5); // chỉ lấy 5 dòng đầu stacktrace
+                if (method_exists($e, 'getSql')) {
+                    $errorResponse['sql'] = $e->getSql();
+                }
+                if (method_exists($e, 'getBindings')) {
+                    $errorResponse['bindings'] = $e->getBindings();
+                }
+            }
 
             // Kiểm tra lỗi khóa ngoại
             if (str_contains($e->getMessage(), 'foreign key constraint fails')) {
@@ -202,42 +219,37 @@ class ShowTimeController extends Controller
                 } else {
                     $message .= 'Dữ liệu không thỏa mãn ràng buộc khóa ngoại.';
                 }
-                return response()->json([
-                    'code' => 422,
-                    'message' => $message,
-                    'data' => null
-                ], 422);
+                $errorResponse['message'] = $message;
+                return response()->json($errorResponse, 422);
             }
 
             // Kiểm tra lỗi cú pháp SQL
             if (str_contains($e->getMessage(), 'SQLSTATE[42000]')) {
-                return response()->json([
-                    'code' => 500,
-                    'message' => 'Lỗi cú pháp SQL: ' . $e->getMessage(),
-                    'data' => null
-                ], 500);
+                $errorResponse['message'] = 'Lỗi cú pháp SQL: ' . $e->getMessage();
+                return response()->json($errorResponse, 500);
             }
 
             // Lỗi cơ sở dữ liệu khác
-            return response()->json([
-                'code' => 500,
-                'message' => 'Lỗi cơ sở dữ liệu: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return response()->json($errorResponse, 500);
 
         } catch (\Exception $e) {
             \DB::rollBack();
             // Ghi log lỗi chung
-            Log::error('Unexpected error in store showtime', [
+            \Log::error('Unexpected error in store showtime', [
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
             ]);
-
-            return response()->json([
+            $debug = config('app.debug');
+            $errorResponse = [
                 'code' => 500,
                 'message' => 'Lỗi không xác định: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5);
+            }
+            return response()->json($errorResponse, 500);
         }
     }
 
