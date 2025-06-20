@@ -68,5 +68,8 @@ php artisan view:clear --no-interaction >/dev/null 2>&1
 # Create storage link (silent)  
 php artisan storage:link --no-interaction >/dev/null 2>&1
 
+echo "===== Laravel log ====="
+tail -n 50 /var/www/storage/logs/laravel.log || true
+
 # Start supervisor
 exec /usr/bin/supervisord -c /etc/supervisor.d/supervisord.ini
