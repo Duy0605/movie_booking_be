@@ -68,6 +68,11 @@ php artisan view:clear --no-interaction >/dev/null 2>&1
 # Create storage link (silent)  
 php artisan storage:link --no-interaction >/dev/null 2>&1
 
+mkdir -p /var/www/storage/logs
+touch /var/www/storage/logs/laravel.log
+chown -R www:www /var/www/storage
+chmod -R 775 /var/www/storage
+
 echo "===== .env file ====="
 cat /var/www/.env
 
