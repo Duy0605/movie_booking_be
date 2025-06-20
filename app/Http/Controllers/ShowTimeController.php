@@ -95,72 +95,150 @@ class ShowTimeController extends Controller
     // Tạo mới suất chiếu
     public function store(Request $request)
     {
-        $request->validate([
-            'movie_id' => 'required|string|exists:movie,movie_id',
-            'start_time' => 'required|date',
-            'room_id' => 'required|string|exists:room,room_id',
-            'price' => 'required|numeric|min:0',
-        ]);
+        try {
+            // Xác thực dữ liệu
+            $validated = $request->validate([
+                'movie_id' => 'required|string|exists:movie,movie_id',
+                'start_time' => 'required|date',
+                'room_id' => 'required|string|exists:room,room_id',
+                'price' => 'required|numeric|min:0',
+            ], [
+                'movie_id.required' => 'Vui lòng nhập movie_id.',
+                'movie_id.string' => 'movie_id phải là chuỗi.',
+                'movie_id.exists' => 'Phim không tồn tại.',
+                'start_time.required' => 'Vui lòng nhập thời gian bắt đầu.',
+                'start_time.date' => 'Thời gian bắt đầu không hợp lệ.',
+                'room_id.required' => 'Vui lòng nhập room_id.',
+                'room_id.string' => 'room_id phải là chuỗi.',
+                'room_id.exists' => 'Phòng không tồn tại.',
+                'price.required' => 'Vui lòng nhập giá vé.',
+                'price.numeric' => 'Giá vé phải là số.',
+                'price.min' => 'Giá vé không được nhỏ hơn 0.',
+            ]);
 
-        // Lấy phim để biết duration
-        $movie = Movie::where('movie_id', $request->movie_id)
-            ->where('is_deleted', false)
-            ->select('movie_id', 'title', 'duration')
-            ->first();
-        if (!$movie) {
-            return response()->json([
-                'code' => 404,
-                'message' => 'Phim không tồn tại'
-            ], 404);
-        }
+            // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+            \DB::beginTransaction();
 
-        $startTime = Carbon::parse($request->start_time);
-        $endTime = (clone $startTime)->addMinutes($movie->duration);
-
-        // Kiểm tra trùng suất chiếu trong cùng phòng
-        $conflict = ShowTime::where('room_id', $request->room_id)
-            ->where('is_deleted', false)
-            ->get()
-            ->filter(function ($showtime) use ($startTime, $endTime) {
-                $movieDuration = $showtime->movie->duration ?? 0;
-                $existingStart = Carbon::parse($showtime->start_time);
-                $existingEnd = (clone $existingStart)->addMinutes($movieDuration);
-
-                return $startTime < $existingEnd && $endTime > $existingStart;
-            })
-            ->isNotEmpty();
-
-        if ($conflict) {
-            return response()->json([
-                'code' => 400,
-                'message' => 'Phòng đã có suất chiếu trong khung giờ này.'
-            ], 400);
-        }
-
-        $showtime = ShowTime::create([
-            'showtime_id' => Str::uuid()->toString(),
-            'movie_id' => $request->movie_id,
-            'start_time' => $request->start_time,
-            'room_id' => $request->room_id,
-            'price' => $request->price,
-            'is_deleted' => false,
-        ]);
-
-        $showtime->load([
-            'movie' => function ($query) {
-                $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
-            },
-            'room.cinema' => function ($query) {
-                $query->select('cinema_id', 'name')
-                    ->where('is_deleted', false);
+            // Lấy phim để biết duration
+            $movie = Movie::where('movie_id', $validated['movie_id'])
+                ->where('is_deleted', false)
+                ->select('movie_id', 'title', 'duration')
+                ->first();
+            if (!$movie) {
+                return response()->json([
+                    'code' => 404,
+                    'message' => 'Phim không tồn tại hoặc đã bị xóa.'
+                ], 404);
             }
-        ]);
 
-        return response()->json([
-            'code' => 201,
-            'message' => 'Tạo suất chiếu thành công',
-            'data' => $showtime
-        ]);
+            $startTime = Carbon::parse($validated['start_time']);
+            $endTime = (clone $startTime)->addMinutes($movie->duration);
+
+            // Kiểm tra trùng suất chiếu trong cùng phòng
+            $conflict = ShowTime::where('room_id', $validated['room_id'])
+                ->where('is_deleted', false)
+                ->get()
+                ->filter(function ($showtime) use ($startTime, $endTime) {
+                    $movieDuration = $showtime->movie->duration ?? 0;
+                    $existingStart = Carbon::parse($showtime->start_time);
+                    $existingEnd = (clone $existingStart)->addMinutes($movieDuration);
+
+                    return $startTime < $existingEnd && $endTime > $existingStart;
+                })
+                ->isNotEmpty();
+
+            if ($conflict) {
+                return response()->json([
+                    'code' => 400,
+                    'message' => 'Phòng đã có suất chiếu trong khung giờ này.'
+                ], 400);
+            }
+
+            // Tạo suất chiếu
+            $showtime = ShowTime::create([
+                'showtime_id' => Str::uuid()->toString(),
+                'movie_id' => $validated['movie_id'],
+                'start_time' => $validated['start_time'],
+                'room_id' => $validated['room_id'],
+                'price' => $validated['price'],
+                'is_deleted' => false,
+            ]);
+
+            // Eager load relationships
+            $showtime->load([
+                'movie' => function ($query) {
+                    $query->select('movie_id', 'title', 'duration')->where('is_deleted', false);
+                },
+                'room.cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ]);
+
+            \DB::commit();
+
+            return response()->json([
+                'code' => 201,
+                'message' => 'Tạo suất chiếu thành công',
+                'data' => $showtime
+            ], 201);
+
+        } catch (QueryException $e) {
+            \DB::rollBack();
+            // Ghi log chi tiết lỗi
+            Log::error('Failed to create showtime', [
+                'error' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'request_data' => $request->all(),
+            ]);
+
+            // Kiểm tra lỗi khóa ngoại
+            if (str_contains($e->getMessage(), 'foreign key constraint fails')) {
+                $message = 'Lỗi khóa ngoại: ';
+                if (str_contains($e->getMessage(), 'movie_id')) {
+                    $message .= 'movie_id không tồn tại hoặc không hợp lệ.';
+                } elseif (str_contains($e->getMessage(), 'room_id')) {
+                    $message .= 'room_id không tồn tại hoặc không hợp lệ.';
+                } else {
+                    $message .= 'Dữ liệu không thỏa mãn ràng buộc khóa ngoại.';
+                }
+                return response()->json([
+                    'code' => 422,
+                    'message' => $message,
+                    'data' => null
+                ], 422);
+            }
+
+            // Kiểm tra lỗi cú pháp SQL
+            if (str_contains($e->getMessage(), 'SQLSTATE[42000]')) {
+                return response()->json([
+                    'code' => 500,
+                    'message' => 'Lỗi cú pháp SQL: ' . $e->getMessage(),
+                    'data' => null
+                ], 500);
+            }
+
+            // Lỗi cơ sở dữ liệu khác
+            return response()->json([
+                'code' => 500,
+                'message' => 'Lỗi cơ sở dữ liệu: ' . $e->getMessage(),
+                'data' => null
+            ], 500);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            // Ghi log lỗi chung
+            Log::error('Unexpected error in store showtime', [
+                'error' => $e->getMessage(),
+                'request_data' => $request->all(),
+            ]);
+
+            return response()->json([
+                'code' => 500,
+                'message' => 'Lỗi không xác định: ' . $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
     }
 
     // Lấy thông tin một suất chiếu cụ thể
