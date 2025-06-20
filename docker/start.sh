@@ -5,7 +5,7 @@ cat > /var/www/.env << EOF
 APP_NAME=${APP_NAME:-Laravel}
 APP_ENV=${APP_ENV:-production}  
 APP_KEY=${APP_KEY:-}
-APP_DEBUG=${true}
+APP_DEBUG=${APP_DEBUG:-false}
 APP_URL=${APP_URL:-http://localhost}
 APP_CIPHER=${APP_CIPHER:-AES-256-CBC}
 
@@ -68,18 +68,5 @@ php artisan view:clear --no-interaction >/dev/null 2>&1
 # Create storage link (silent)  
 php artisan storage:link --no-interaction >/dev/null 2>&1
 
-mkdir -p /var/www/storage/logs
-touch /var/www/storage/logs/laravel.log
-chown -R www:www /var/www/storage
-chmod -R 775 /var/www/storage
-
-echo "===== .env file ====="
-cat /var/www/.env
-
-echo "===== Laravel log ====="
-tail -n 50 /var/www/storage/logs/laravel.log || true
-
 # Start supervisor
 exec /usr/bin/supervisord -c /etc/supervisor.d/supervisord.ini
-
-tail -f /var/www/storage/logs/laravel.log &
