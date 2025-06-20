@@ -31,15 +31,15 @@ class BookingController extends Controller
     // Tạo mới một booking
     public function store(Request $request)
     {
-        $request->validate([
-            'user_id' => 'required|string|exists:user_account,user_id',
-            'showtime_id' => 'required|string|exists:showtime,showtime_id',
-            'total_price' => 'numeric',
-            'status' => 'in:PENDING,CONFIRMED,CANCELLED',
-        ]);
-
-        DB::beginTransaction();
         try {
+            $request->validate([
+                'user_id' => 'required|string|exists:user_account,user_id',
+                'showtime_id' => 'required|string|exists:showtime,showtime_id',
+                'total_price' => 'numeric',
+                'status' => 'in:PENDING,CONFIRMED,CANCELLED',
+            ]);
+
+            DB::beginTransaction();
             // Tạo booking
             $booking = Booking::create([
                 'booking_id' => Str::uuid(),
@@ -78,7 +78,16 @@ class BookingController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-            return ApiResponse::error('Lỗi tạo booking', 500, $e->getMessage());
+            $debug = config('app.debug');
+            $errorResponse = [
+                'message' => 'Lỗi tạo booking: ' . $e->getMessage(),
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5);
+            }
+            return response()->json($errorResponse, 500);
         }
     }
 
@@ -119,232 +128,296 @@ class BookingController extends Controller
     }
 
     // Cập nhật booking (ví dụ đổi trạng thái)
-public function update(Request $request, $id)
+    public function update(Request $request, $id)
     {
-        Log::info("Updating booking ID: {$id}, Request data:", $request->all());
+        try {
+            Log::info("Updating booking ID: {$id}, Request data:", $request->all());
 
-        $booking = Booking::find($id);
-        if (!$booking) {
-            Log::error("Booking not found for ID: {$id}");
-            return ApiResponse::error('Booking không tồn tại', 404);
-        }
+            $booking = Booking::find($id);
+            if (!$booking) {
+                Log::error("Booking not found for ID: {$id}");
+                return ApiResponse::error('Booking không tồn tại', 404);
+            }
 
-        $request->validate([
-            'status' => 'required|in:PENDING,CONFIRMED,CANCELLED',
-        ]);
+            $request->validate([
+                'status' => 'required|in:PENDING,CONFIRMED,CANCELLED',
+            ]);
 
-        $newStatus = $request->status;
-        $oldStatus = $booking->status;
+            $newStatus = $request->status;
+            $oldStatus = $booking->status;
 
-        Log::info("Booking ID: {$id}, Old Status: {$oldStatus}, New Status: {$newStatus}");
+            Log::info("Booking ID: {$id}, Old Status: {$oldStatus}, New Status: {$newStatus}");
 
-        // Update booking status
-        $booking->status = $newStatus;
-        $booking->save();
+            // Update booking status
+            $booking->status = $newStatus;
+            $booking->save();
 
-        // Send email if status is changed to CONFIRMED
-        if ($newStatus === 'CONFIRMED' && $oldStatus !== 'CONFIRMED') {
-            Log::info("Processing CONFIRMED status for booking ID: {$id}");
+            // Send email if status is changed to CONFIRMED
+            if ($newStatus === 'CONFIRMED' && $oldStatus !== 'CONFIRMED') {
+                Log::info("Processing CONFIRMED status for booking ID: {$id}");
 
-            // Find user
-            $user = $booking->user;
-            if (!$user || !$user->email) {
-                Log::error("User or user email not found for booking ID: {$id}", ['user_id' => $booking->user_id]);
-            } else {
-                // Find payment
-                $payment = Payment::where('booking_id', $booking->booking_id)->first();
-
-                if ($payment && $payment->payment_status === 'PENDING') {
-                    // Check for other COMPLETED payments
-                    $existsCompleted = Payment::where('booking_id', $booking->booking_id)
-                        ->where('payment_status', 'COMPLETED')
-                        ->where('payment_id', '!=', $payment->payment_id)
-                        ->exists();
-
-                    if ($existsCompleted) {
-                        Log::warning("Booking ID {$booking->booking_id} already has a COMPLETED payment.");
-                    } else {
-                        // Update payment status to COMPLETED
-                        $payment->payment_status = 'COMPLETED';
-                        $payment->save();
-                        Log::info("Payment ID {$payment->payment_id} updated to COMPLETED for booking ID: {$booking->booking_id}");
-                    }
+                // Find user
+                $user = $booking->user;
+                if (!$user || !$user->email) {
+                    Log::error("User or user email not found for booking ID: {$id}", ['user_id' => $booking->user_id]);
                 } else {
-                    Log::warning("No payment found for booking ID: {$booking->booking_id}, proceeding with email");
-                }
+                    // Find payment
+                    $payment = Payment::where('booking_id', $booking->booking_id)->first();
 
-                // Prepare email data
-                $showtime = $booking->showtime;
-                $movie = $showtime ? $showtime->movie : null;
-                $room = $showtime ? $showtime->room : null;
-                $cinema = $room ? $room->cinema : null;
+                    if ($payment && $payment->payment_status === 'PENDING') {
+                        // Check for other COMPLETED payments
+                        $existsCompleted = Payment::where('booking_id', $booking->booking_id)
+                            ->where('payment_status', 'COMPLETED')
+                            ->where('payment_id', '!=', $payment->payment_id)
+                            ->exists();
 
-                // Get booked seats
-                $seats = $booking->bookingSeats->map(function ($bs) {
-                    return $bs->seat->seat_number ?? '';
-                })->toArray();
-                $seatsString = implode(', ', $seats);
+                        if ($existsCompleted) {
+                            Log::warning("Booking ID {$booking->booking_id} already has a COMPLETED payment.");
+                        } else {
+                            // Update payment status to COMPLETED
+                            $payment->payment_status = 'COMPLETED';
+                            $payment->save();
+                            Log::info("Payment ID {$payment->payment_id} updated to COMPLETED for booking ID: {$booking->booking_id}");
+                        }
+                    } else {
+                        Log::warning("No payment found for booking ID: {$booking->booking_id}, proceeding with email");
+                    }
 
-                // Email data
-                $customerName = $user->full_name ?? 'Khách hàng';
-                $bookingId = $booking->booking_id;
-                $movieTitle = $movie ? $movie->title : 'Tên phim';
-                $cinemaName = $cinema ? $cinema->name : 'Rạp chiếu';
-                $roomName = $room ? $room->room_name : 'Phòng chiếu';
-                $showtimeStr = $showtime ? $showtime->start_time->format('d-m-Y H:i') : 'Thời gian chiếu';
-                $totalPrice = $booking->total_price ?? 0;
-                $barcode = $booking->barcode ?? '';
-                $ticketCode = $payment ? $payment->payment_id : $bookingId;
+                    // Prepare email data
+                    $showtime = $booking->showtime;
+                    $movie = $showtime ? $showtime->movie : null;
+                    $room = $showtime ? $showtime->room : null;
+                    $cinema = $room ? $room->cinema : null;
 
-                Log::info("Preparing email for booking ID: {$bookingId}", [
-                    'email' => $user->email,
-                    'customerName' => $customerName,
-                    'movieTitle' => $movieTitle,
-                    'showtimeStr' => $showtimeStr,
-                    'barcode' => $barcode,
-                    'totalPrice' => $totalPrice,
-                    'ticketCode' => $ticketCode,
-                    'seats' => $seatsString,
-                ]);
+                    // Get booked seats
+                    $seats = $booking->bookingSeats->map(function ($bs) {
+                        return $bs->seat->seat_number ?? '';
+                    })->toArray();
+                    $seatsString = implode(', ', $seats);
 
-                if (!$barcode) {
-                    Log::warning("No barcode URL found for booking ID: {$bookingId}");
-                }
+                    // Email data
+                    $customerName = $user->full_name ?? 'Khách hàng';
+                    $bookingId = $booking->booking_id;
+                    $movieTitle = $movie ? $movie->title : 'Tên phim';
+                    $cinemaName = $cinema ? $cinema->name : 'Rạp chiếu';
+                    $roomName = $room ? $room->room_name : 'Phòng chiếu';
+                    $showtimeStr = $showtime ? $showtime->start_time->format('d-m-Y H:i') : 'Thời gian chiếu';
+                    $totalPrice = $booking->total_price ?? 0;
+                    $barcode = $booking->barcode ?? '';
+                    $ticketCode = $payment ? $payment->payment_id : $bookingId;
 
-                try {
-                    // Use send() for testing to avoid queue delays
-                    Mail::to($user->email)->send(new New_movie_ticket(
-                        $customerName,
-                        $bookingId,
-                        $movieTitle,
-                        $cinemaName,
-                        $roomName,
-                        $showtimeStr,
-                        $seatsString,
-                        $totalPrice,
-                        $barcode,
-                        $ticketCode
-                    ));
-                    Log::info("Confirmation email sent successfully for booking ID: {$bookingId}");
-                } catch (\Exception $e) {
-                    Log::error("Failed to send confirmation email for booking ID {$booking->booking_id}: {$e->getMessage()}");
+                    Log::info("Preparing email for booking ID: {$bookingId}", [
+                        'email' => $user->email,
+                        'customerName' => $customerName,
+                        'movieTitle' => $movieTitle,
+                        'showtimeStr' => $showtimeStr,
+                        'barcode' => $barcode,
+                        'totalPrice' => $totalPrice,
+                        'ticketCode' => $ticketCode,
+                        'seats' => $seatsString,
+                    ]);
+
+                    if (!$barcode) {
+                        Log::warning("No barcode URL found for booking ID: {$bookingId}");
+                    }
+
+                    try {
+                        // Use send() for testing to avoid queue delays
+                        Mail::to($user->email)->send(new New_movie_ticket(
+                            $customerName,
+                            $bookingId,
+                            $movieTitle,
+                            $cinemaName,
+                            $roomName,
+                            $showtimeStr,
+                            $seatsString,
+                            $totalPrice,
+                            $barcode,
+                            $ticketCode
+                        ));
+                        Log::info("Confirmation email sent successfully for booking ID: {$bookingId}");
+                    } catch (\Exception $e) {
+                        Log::error("Failed to send confirmation email for booking ID {$booking->booking_id}: {$e->getMessage()}");
+                    }
                 }
             }
-        }
 
-        return ApiResponse::success($booking, 'Cập nhật trạng thái thành công');
+            return ApiResponse::success($booking, 'Cập nhật trạng thái thành công');
+        } catch (\Exception $e) {
+            $debug = config('app.debug');
+            $errorResponse = [
+                'message' => 'Lỗi cập nhật booking: ' . $e->getMessage(),
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5);
+            }
+            return response()->json($errorResponse, 500);
+        }
     }
 
     // Cập nhật tổng giá tiền của booking (nếu chưa thanh toán)
     public function updateTotalPrice(Request $request, $id)
     {
-        $booking = Booking::find($id);
-        if (!$booking) {
-            return ApiResponse::error('Booking không tồn tại', 404);
+        try {
+            $booking = Booking::find($id);
+            if (!$booking) {
+                return ApiResponse::error('Booking không tồn tại', 404);
+            }
+
+            $hasCompletedPayment = Payment::where('booking_id', $booking->booking_id)
+                ->where('payment_status', 'COMPLETED')
+                ->exists();
+
+            if ($hasCompletedPayment) {
+                return ApiResponse::error('Booking đã thanh toán, không thể cập nhật giá tiền', 403);
+            }
+
+            $request->validate([
+                'total_price' => 'required|numeric|min:0',
+            ]);
+
+            $booking->total_price = $request->total_price;
+            $booking->save();
+
+            return ApiResponse::success($booking, 'Cập nhật giá tiền thành công');
+        } catch (\Exception $e) {
+            $debug = config('app.debug');
+            $errorResponse = [
+                'message' => 'Lỗi cập nhật giá tiền: ' . $e->getMessage(),
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5);
+            }
+            return response()->json($errorResponse, 500);
         }
-
-        $hasCompletedPayment = Payment::where('booking_id', $booking->booking_id)
-            ->where('payment_status', 'COMPLETED')
-            ->exists();
-
-        if ($hasCompletedPayment) {
-            return ApiResponse::error('Booking đã thanh toán, không thể cập nhật giá tiền', 403);
-        }
-
-        $request->validate([
-            'total_price' => 'required|numeric|min:0',
-        ]);
-
-        $booking->total_price = $request->total_price;
-        $booking->save();
-
-        return ApiResponse::success($booking, 'Cập nhật giá tiền thành công');
     }
 
     // Cập nhật orderCode của booking (nếu chưa thanh toán)
     public function updateOrderCode(Request $request, $id)
     {
-        $booking = Booking::find($id);
-        if (!$booking) {
-            return ApiResponse::error('Booking không tồn tại', 404);
+        try {
+            $booking = Booking::find($id);
+            if (!$booking) {
+                return ApiResponse::error('Booking không tồn tại', 404);
+            }
+
+            $hasCompletedPayment = Payment::where('booking_id', $booking->booking_id)
+                ->where('payment_status', 'COMPLETED')
+                ->exists();
+
+            if ($hasCompletedPayment) {
+                return ApiResponse::error('Booking đã thanh toán, không thể cập nhật orderCode', 403);
+            }
+
+            $request->validate([
+                'order_code' => 'required|string|max:255',
+            ]);
+
+            $booking->order_code = $request->order_code;
+            $booking->save();
+
+            return ApiResponse::success($booking, 'Cập nhật orderCode thành công');
+        } catch (\Exception $e) {
+            $debug = config('app.debug');
+            $errorResponse = [
+                'message' => 'Lỗi cập nhật orderCode: ' . $e->getMessage(),
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5);
+            }
+            return response()->json($errorResponse, 500);
         }
-
-        $hasCompletedPayment = Payment::where('booking_id', $booking->booking_id)
-            ->where('payment_status', 'COMPLETED')
-            ->exists();
-
-        if ($hasCompletedPayment) {
-            return ApiResponse::error('Booking đã thanh toán, không thể cập nhật orderCode', 403);
-        }
-
-        $request->validate([
-            'order_code' => 'required|string|max:255',
-        ]);
-
-        $booking->order_code = $request->order_code;
-        $booking->save();
-
-        return ApiResponse::success($booking, 'Cập nhật orderCode thành công');
     }
 
     public function updateCoupon(Request $request, $booking_id)
-{
-    $request->validate([
-        'coupon_code' => 'nullable|string|exists:coupon,code', // Fixed table name to 'coupons'
-    ]);
-
-    // Find the booking
-    $booking = Booking::where('booking_id', $booking_id)
-        ->where('is_deleted', false)
-        ->first();
-
-    if (!$booking) {
-        return ApiResponse::error('Booking not found', 404);
-    }
-
-    // Check if the booking is in PENDING status
-    if ($booking->status !== 'PENDING') {
-        return ApiResponse::error('Cannot update coupon: Booking is not in PENDING status', 400);
-    }
-
-    $coupon = null;
-    $couponCode = $request->input('coupon_code');
-
-    if ($couponCode) {
-        $coupon = Coupon::where('code', $couponCode)
-            ->where('is_active', true)
-            ->whereColumn('is_used', '<', 'quantity')
-            ->where('expiry_date', '>=', Carbon::now())
-            ->first();
-
-        if (!$coupon) {
-            return ApiResponse::error('Invalid or unusable coupon', 400);
-        }
-    }
-
-    // Update the coupon_id
-    $booking->coupon_id = $coupon ? $coupon->coupon_id : null;
-    $booking->save();
-
-    return ApiResponse::success($booking, 'Coupon updated successfully');
-}
-
-public function updateBarcode(Request $request, $bookingId)
     {
+        try {
+            $request->validate([
+                'coupon_code' => 'nullable|string|exists:coupon,code', // Fixed table name to 'coupons'
+            ]);
 
-        $request->validate([
-            'barcode' => 'required|url',
-        ]);
+            // Find the booking
+            $booking = Booking::where('booking_id', $booking_id)
+                ->where('is_deleted', false)
+                ->first();
 
-        $booking = Booking::where('booking_id', $bookingId)->first();
-        if (!$booking) {
-            return ApiResponse::error('booking không tồn tại', 404);
+            if (!$booking) {
+                return ApiResponse::error('Booking not found', 404);
+            }
+
+            // Check if the booking is in PENDING status
+            if ($booking->status !== 'PENDING') {
+                return ApiResponse::error('Cannot update coupon: Booking is not in PENDING status', 400);
+            }
+
+            $coupon = null;
+            $couponCode = $request->input('coupon_code');
+
+            if ($couponCode) {
+                $coupon = Coupon::where('code', $couponCode)
+                    ->where('is_active', true)
+                    ->whereColumn('is_used', '<', 'quantity')
+                    ->where('expiry_date', '>=', Carbon::now())
+                    ->first();
+
+                if (!$coupon) {
+                    return ApiResponse::error('Invalid or unusable coupon', 400);
+                }
+            }
+
+            // Update the coupon_id
+            $booking->coupon_id = $coupon ? $coupon->coupon_id : null;
+            $booking->save();
+
+            return ApiResponse::success($booking, 'Coupon updated successfully');
+        } catch (\Exception $e) {
+            $debug = config('app.debug');
+            $errorResponse = [
+                'message' => 'Lỗi cập nhật coupon: ' . $e->getMessage(),
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5);
+            }
+            return response()->json($errorResponse, 500);
         }
+    }
 
-        $booking->barcode = $request->barcode;
-        $booking->save();
+    public function updateBarcode(Request $request, $bookingId)
+    {
+        try {
+            $request->validate([
+                'barcode' => 'required|url',
+            ]);
 
-        return ApiResponse::success($booking, 'Cập nhật barcode URL thành công');
+            $booking = Booking::where('booking_id', $bookingId)->first();
+            if (!$booking) {
+                return ApiResponse::error('booking không tồn tại', 404);
+            }
+
+            $booking->barcode = $request->barcode;
+            $booking->save();
+
+            return ApiResponse::success($booking, 'Cập nhật barcode URL thành công');
+        } catch (\Exception $e) {
+            $debug = config('app.debug');
+            $errorResponse = [
+                'message' => 'Lỗi cập nhật barcode: ' . $e->getMessage(),
+            ];
+            if ($debug) {
+                $errorResponse['file'] = $e->getFile();
+                $errorResponse['line'] = $e->getLine();
+                $errorResponse['trace'] = collect($e->getTrace())->take(5);
+            }
+            return response()->json($errorResponse, 500);
+        }
     }
 
     // Tìm kiếm booking theo số điện thoại hoặc tên người dùng
