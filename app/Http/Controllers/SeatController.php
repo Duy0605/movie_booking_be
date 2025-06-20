@@ -168,16 +168,24 @@ class SeatController extends Controller
 
     // Tạo mới nhiều ghế
     public function storeMultiple(Request $request)
-{
-    try {
-        Log::info('Starting batch seat creation', $request->all());
-        
+    {
         $request->validate([
             'room_id' => 'required|string',
-            'prefix' => 'required|string|regex:/^[A-Z]{1}$/',
+            'prefix' => [
+                'required',
+                'string',
+                'regex:/^[A-Z]{1}$/', // Chỉ cho phép 1 ký tự in hoa duy nhất
+            ],
             'start_index' => 'required|integer|min:1',
             'end_index' => 'required|integer|gte:start_index',
             'seat_type' => 'in:STANDARD,VIP,COUPLE',
+        ], [
+            'room_id.required' => 'Vui lòng nhập room_id.',
+            'prefix.required' => 'Vui lòng nhập tiền tố tên ghế.',
+            'prefix.regex' => 'Tiền tố chỉ được là 1 ký tự in hoa (A-Z).',
+            'start_index.required' => 'Vui lòng nhập chỉ số bắt đầu.',
+            'end_index.required' => 'Vui lòng nhập chỉ số kết thúc.',
+            'end_index.gte' => 'Chỉ số kết thúc phải lớn hơn hoặc bằng bắt đầu.',
         ]);
 
         $roomId = $request->room_id;
@@ -186,65 +194,66 @@ class SeatController extends Controller
         $end = $request->end_index;
         $seatType = $request->seat_type ?? 'STANDARD';
 
-        // Giới hạn số lượng
-        if (($end - $start + 1) > 100) {
-            return ApiResponse::error('Tối đa 100 ghế/lần', 400);
-        }
-
-        $created = 0;
-        $restored = 0;
+        $seatsToCreate = [];
+        $seatsToRestore = [];
 
         for ($i = $start; $i <= $end; $i++) {
             $seatNumber = $prefix . $i;
 
+            // Không cho phép định dạng như A01, AA5, a1,...
             if (!preg_match('/^[A-Z]{1}[1-9][0-9]*$/', $seatNumber)) {
-                continue;
+                continue; // Bỏ qua ghế không đúng định dạng
             }
 
-            // Tìm ghế đã tồn tại
+            // Kiểm tra ghế đã tồn tại
             $existingSeat = Seat::where('room_id', $roomId)
                 ->where('seat_number', $seatNumber)
                 ->first();
 
             if ($existingSeat) {
                 if ($existingSeat->is_deleted) {
-                    $existingSeat->is_deleted = false;
-                    $existingSeat->seat_type = $seatType;
-                    $existingSeat->save();
-                    $restored++;
+                    // Thêm vào danh sách ghế cần khôi phục
+                    $seatsToRestore[] = $existingSeat;
                 }
-                continue;
+                continue; // Bỏ qua ghế đã tồn tại (bao gồm cả ghế không bị xóa)
             }
 
-            // Tạo ghế mới (từng cái một thay vì bulk insert)
-            Seat::create([
-                'seat_id' => uniqid('seat_', true), // Thay Str::uuid()
+            // Thêm vào danh sách ghế cần tạo mới
+            $seatsToCreate[] = [
+                'seat_id' => (string) Str::uuid(),
                 'room_id' => $roomId,
                 'seat_number' => $seatNumber,
                 'seat_type' => $seatType,
-            ]);
-            $created++;
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
         }
 
-        $total = $created + $restored;
-        
-        if ($total === 0) {
-            return ApiResponse::error('Tất cả các ghế đều đã tồn tại.', 409);
+        // Khôi phục các ghế đã bị xóa mềm
+        foreach ($seatsToRestore as $seat) {
+            $seat->is_deleted = false;
+            $seat->seat_type = $seatType;
+            $seat->save();
         }
 
-        return ApiResponse::success([
-            'created' => $created,
-            'restored' => $restored,
-            'total' => $total
-        ], "Tạo thành công {$created} ghế, khôi phục {$restored} ghế", 201);
+        // Tạo mới các ghế
+        if (!empty($seatsToCreate)) {
+            Seat::insert($seatsToCreate);
+        }
 
-    } catch (\Exception $e) {
-        Log::error('Seat batch error: ' . $e->getMessage());
-        Log::error('Stack trace: ' . $e->getTraceAsString());
-        
-        return ApiResponse::error('Lỗi server: ' . $e->getMessage(), 500);
+        $totalProcessed = count($seatsToCreate) + count($seatsToRestore);
+
+        if ($totalProcessed === 0) {
+            return ApiResponse::error('Tất cả các ghế đều đã tồn tại hoặc không hợp lệ.', 409);
+        }
+
+        // Convert merged array to collection
+        $processedSeats = collect(array_merge(
+            $seatsToCreate,
+            array_map(function ($seat) { return $seat->toArray(); }, $seatsToRestore)
+        ));
+        return ApiResponse::success($processedSeats, 'Xử lý ghế hàng loạt thành công (' . count($seatsToRestore) . ' khôi phục, ' . count($seatsToCreate) . ' tạo mới)', 201);
     }
-}
 
     // Xóa mềm nhiều ghế
     public function softDeleteMultiple(Request $request)
