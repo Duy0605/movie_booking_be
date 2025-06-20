@@ -11,7 +11,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: true
+        value: true  # Enable debug for troubleshooting
       - key: APP_CIPHER
         value: AES-256-CBC
       - key: APP_KEY
@@ -40,3 +40,7 @@ services:
         value: https://movie-ticket-murex.vercel.app
       - key: SANCTUM_STATEFUL_DOMAINS
         value: movie-ticket-murex.vercel.app
+      - key: TRUSTED_PROXIES
+        value: "*"
+      - key: LOG_LEVEL
+        value: debug
