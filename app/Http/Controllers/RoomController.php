@@ -38,42 +38,78 @@ class RoomController extends Controller
     }
 
     // Tạo mới một phòng
-    public function store(Request $request)
+   public function store(Request $request)
     {
-        $request->validate([
-            'cinema_id' => 'required|string|exists:cinema,cinema_id',
-            'room_name' => [
-                'required',
-                'string',
-                'max:100',
-            ],
-            'status' => 'sometimes|in:AVAILABLE,UNAVAILABLE',
-        ], [
-            'cinema_id.required' => 'Vui lòng nhập cinema_id.',
-            'cinema_id.string' => 'cinema_id phải là chuỗi.',
-            'cinema_id.exists' => 'Rạp không tồn tại.',
-            'room_name.required' => 'Vui lòng nhập tên phòng.',
-            'room_name.string' => 'Tên phòng phải là chuỗi.',
-            'room_name.max' => 'Tên phòng không được vượt quá 100 ký tự.',
-            'room_name.unique' => 'Tên phòng đã tồn tại.',
-            'status.in' => 'Trạng thái phải là AVAILABLE hoặc UNAVAILABLE.',
-        ]);
+        try {
+            // Xác thực dữ liệu
+            $validated = $request->validate([
+                'cinema_id' => 'required|string|exists:cinema,cinema_id',
+                'room_name' => [
+                    'required',
+                    'string',
+                    'max:100',
+                ],
+                'status' => 'sometimes|in:AVAILABLE,UNAVAILABLE',
+            ], [
+                'cinema_id.required' => 'Vui lòng nhập cinema_id.',
+                'cinema_id.string' => 'cinema_id phải là chuỗi.',
+                'cinema_id.exists' => 'Rạp không tồn tại.',
+                'room_name.required' => 'Vui lòng nhập tên phòng.',
+                'room_name.string' => 'Tên phòng phải là chuỗi.',
+                'room_name.max' => 'Tên phòng không được vượt quá 100 ký tự.',
+                'status.in' => 'Trạng thái phải là AVAILABLE hoặc UNAVAILABLE.',
+            ]);
 
-        $room = Room::create([
-            'room_id' => (string) Str::uuid(),
-            'cinema_id' => $request->cinema_id,
-            'room_name' => $request->room_name,
-            'status' => $request->input('status', 'AVAILABLE'), // Default to AVAILABLE
-        ]);
+            // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+            \DB::beginTransaction();
 
-        // Eager load cinema relationship for the response
-        $room->load([
-            'cinema' => function ($query) {
-                $query->select('cinema_id', 'name')->where('is_deleted', false);
+            // Tạo phòng
+            $room = Room::create([
+                'room_id' => (string) Str::uuid(),
+                'cinema_id' => $validated['cinema_id'],
+                'room_name' => $validated['room_name'],
+                'status' => $request->input('status', 'AVAILABLE'),
+            ]);
+
+            // Eager load cinema relationship
+            $room->load([
+                'cinema' => function ($query) {
+                    $query->select('cinema_id', 'name')->where('is_deleted', false);
+                }
+            ]);
+
+            \DB::commit();
+
+            return ApiResponse::success($room, 'Tạo phòng thành công', 201);
+
+        } catch (QueryException $e) {
+            \DB::rollBack();
+            // Ghi log chi tiết lỗi
+            Log::error('Failed to create room', [
+                'error' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'request_data' => $request->all(),
+            ]);
+
+            // Kiểm tra lỗi khóa ngoại
+            if (str_contains($e->getMessage(), 'foreign key constraint fails')) {
+                return ApiResponse::error('Cinema ID không tồn tại hoặc không hợp lệ.', 422);
             }
-        ]);
 
-        return ApiResponse::success($room, 'Tạo phòng thành công', 201);
+            // Trả về lỗi chi tiết
+            return ApiResponse::error('Lỗi khi tạo phòng: ' . $e->getMessage(), 500);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            // Ghi log lỗi chung
+            Log::error('Unexpected error in store room', [
+                'error' => $e->getMessage(),
+                'request_data' => $request->all(),
+            ]);
+
+            return ApiResponse::error('Lỗi không xác định: ' . $e->getMessage(), 500);
+        }
     }
 
     // Lấy thông tin một phòng cụ thể
