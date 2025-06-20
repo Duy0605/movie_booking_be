@@ -36,7 +36,10 @@ class AuthController extends Controller
                 'profile_picture_url' => $request->profile_picture_url ?? null,
             ]);
 
-            $token = JWTAuth::fromUser($user);
+            $accessToken = JWTAuth::fromUser($user);
+            
+            // Tạo refresh token riêng biệt với thời gian sống lâu hơn
+            $refreshToken = JWTAuth::claims(['type' => 'refresh'])->fromUser($user);
 
             return ApiResponse::success([
                 'user' => [
@@ -48,8 +51,8 @@ class AuthController extends Controller
                     'phone' => $user->phone,
                     'profile_picture_url' => $user->profile_picture_url
                 ],
-                'access_token' => $token,
-                'refresh_token' => $token // Same token for simplicity
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken
             ], 'Đăng ký tài khoản thành công', 201);
         } catch (JWTException $e) {
             return ApiResponse::error('Không thể tạo token: ' . $e->getMessage(), 500);
@@ -68,15 +71,17 @@ class AuthController extends Controller
         $credentials = $request->only('email', 'password');
 
         try {
-            if (!$token = JWTAuth::attempt($credentials)) {
+            if (!$accessToken = JWTAuth::attempt($credentials)) {
                 return ApiResponse::error('Email hoặc mật khẩu không đúng', 401);
             }
 
             $user = Auth::user();
-            $refreshToken = JWTAuth::fromUser($user); // Same token for refresh
+            
+            // Tạo refresh token riêng biệt
+            $refreshToken = JWTAuth::claims(['type' => 'refresh'])->fromUser($user);
 
             return ApiResponse::success([
-                'access_token' => $token,
+                'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
                 'user' => [
                     'user_id' => $user->user_id,
@@ -108,13 +113,68 @@ class AuthController extends Controller
     public function refresh(Request $request)
     {
         try {
-            $newToken = JWTAuth::refresh(JWTAuth::getToken());
+            // Lấy token từ Authorization header
+            $refreshToken = JWTAuth::getToken();
+            
+            if (!$refreshToken) {
+                return ApiResponse::error('Refresh token không được cung cấp', 401);
+            }
+
+            // Xác thực refresh token
+            $payload = JWTAuth::getPayload($refreshToken);
+            
+            // Kiểm tra xem đây có phải là refresh token không
+            if ($payload->get('type') !== 'refresh') {
+                return ApiResponse::error('Token không hợp lệ', 401);
+            }
+
+            // Lấy user từ token
+            $user = JWTAuth::toUser($refreshToken);
+            
+            // Tạo access token mới
+            $newAccessToken = JWTAuth::fromUser($user);
+            
+            // Tạo refresh token mới
+            $newRefreshToken = JWTAuth::claims(['type' => 'refresh'])->fromUser($user);
+            
+            // Invalidate refresh token cũ
+            JWTAuth::invalidate($refreshToken);
+
             return ApiResponse::success([
-                'access_token' => $newToken,
-                'refresh_token' => $newToken // Same token for simplicity
+                'access_token' => $newAccessToken,
+                'refresh_token' => $newRefreshToken
             ], 'Làm mới token thành công');
+            
         } catch (JWTException $e) {
             return ApiResponse::error('Không thể làm mới token: ' . $e->getMessage(), 401);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Làm mới token thất bại: ' . $e->getMessage(), 401);
+        }
+    }
+
+    public function me()
+    {
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+            
+            if (!$user) {
+                return ApiResponse::error('User không tìm thấy', 404);
+            }
+
+            return ApiResponse::success([
+                'user' => [
+                    'user_id' => $user->user_id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'full_name' => $user->full_name,
+                    'dob' => $user->dob,
+                    'phone' => $user->phone,
+                    'profile_picture_url' => $user->profile_picture_url
+                ]
+            ], 'Lấy thông tin user thành công');
+            
+        } catch (JWTException $e) {
+            return ApiResponse::error('Token không hợp lệ: ' . $e->getMessage(), 401);
         }
     }
 }
