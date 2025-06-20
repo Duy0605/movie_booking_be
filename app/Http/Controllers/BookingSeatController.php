@@ -11,10 +11,9 @@ use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Models\ShowTime;
 use App\Response\ApiResponse;
-use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Broadcast;
 
 class BookingSeatController extends Controller
 {
@@ -37,8 +36,8 @@ class BookingSeatController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'booking_id' => 'required|string|exists:bookings,booking_id',
-            'seat_id' => 'required|string|exists:seats,seat_id',
+            'booking_id' => 'required|string|exists:booking,booking_id',
+            'seat_id' => 'required|string|exists:seat,seat_id',
         ]);
 
         // Log broadcast configuration
@@ -88,13 +87,6 @@ class BookingSeatController extends Controller
             return ApiResponse::error('Ghế không thuộc phòng của suất chiếu này', 400);
         }
 
-        // Check Redis lock
-        $lockKey = "seat_lock:{$showtime->showtime_id}:{$request->seat_id}";
-        $lockedBy = Redis::get($lockKey);
-        if ($lockedBy && $lockedBy !== $request->booking_id) {
-            return ApiResponse::error('Ghế đang được giữ bởi người dùng khác', 409);
-        }
-
         try {
             DB::beginTransaction();
 
@@ -107,7 +99,6 @@ class BookingSeatController extends Controller
                 })->where('is_deleted', false)->exists();
 
             if ($exists) {
-                Redis::del($lockKey);
                 return ApiResponse::error('Ghế này đã được đặt cho suất chiếu tương ứng rồi', 409);
             }
 
@@ -129,117 +120,13 @@ class BookingSeatController extends Controller
             }
 
             DB::commit();
-            Redis::del($lockKey);
 
             return ApiResponse::success($bookingSeat, 'Tạo booking seat thành công', 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            Redis::del($lockKey);
             Log::error('Failed to create booking seat', ['error' => $e->getMessage()]);
             return ApiResponse::error('Lỗi khi tạo booking seat: ' . $e->getMessage(), 500);
         }
-    }
-
-    public function lockSeat(Request $request)
-    {
-        $request->validate([
-            'booking_id' => 'required|string|exists:booking,booking_id',
-            'seat_number' => 'required|string',
-            'showtime_id' => 'required|string|exists:showtime,showtime_id',
-        ]);
-
-        $booking = Booking::where('booking_id', $request->booking_id)
-            ->where('is_deleted', false)
-            ->first();
-        if (!$booking) {
-            return ApiResponse::error('Booking không tồn tại hoặc đã bị xóa', 404);
-        }
-
-        $showtime = ShowTime::where('showtime_id', $request->showtime_id)
-            ->where('is_deleted', false)
-            ->first();
-        if (!$showtime) {
-            return ApiResponse::error('Suất chiếu không tồn tại hoặc đã bị xóa', 404);
-        }
-
-        $seat = Seat::where('seat_number', $request->seat_number)
-            ->where('room_id', $showtime->room_id)
-            ->where('is_deleted', false)
-            ->first();
-        if (!$seat) {
-            \Log::error('Seat not found in room', [
-                'seat_number' => $request->seat_number,
-                'room_id' => $showtime->room_id,
-                'showtime_id' => $request->showtime_id
-            ]);
-            return ApiResponse::error('Ghế không tồn tại trong phòng của suất chiếu này', 404);
-        }
-
-        $lockKey = "seat_lock:{$request->showtime_id}:{$seat->seat_id}";
-        $lockedBy = Redis::get($lockKey);
-
-        if ($lockedBy) {
-            if ($lockedBy === $request->booking_id) {
-                // Same user is toggling the seat, so unlock it
-                Redis::del($lockKey);
-                return ApiResponse::success(null, 'Ghế đã được mở khóa', 200);
-            }
-            return ApiResponse::error('Ghế đang được giữ bởi người dùng khác', 409);
-        }
-
-        // Lock the seat
-        Redis::setex($lockKey, 600, $request->booking_id);
-        return ApiResponse::success(null, 'Ghế đã được khóa tạm thời', 200);
-    }
-
-    public function unlockSeat(Request $request)
-    {
-        $request->validate([
-            'booking_id' => 'required|string|exists:booking,booking_id',
-            'seat_number' => 'required|string',
-            'showtime_id' => 'required|string|exists:showtime,showtime_id',
-        ]);
-
-        $booking = Booking::where('booking_id', $request->booking_id)
-            ->where('is_deleted', false)
-            ->first();
-        if (!$booking) {
-            return ApiResponse::error('Booking không tồn tại hoặc đã bị xóa', 404);
-        }
-
-        $showtime = ShowTime::where('showtime_id', $request->showtime_id)
-            ->where('is_deleted', false)
-            ->first();
-        if (!$showtime) {
-            return ApiResponse::error('Suất chiếu không tồn tại hoặc đã bị xóa', 404);
-        }
-
-        $seat = Seat::where('seat_number', $request->seat_number)
-            ->where('room_id', $showtime->room_id)
-            ->where('is_deleted', false)
-            ->first();
-        if (!$seat) {
-            \Log::error('Seat not found for unlock', [
-                'seat_number' => $request->seat_number,
-                'room_id' => $showtime->room_id,
-                'showtime_id' => $request->showtime_id
-            ]);
-            return ApiResponse::error('Ghế không tồn tại trong phòng của suất chiếu này', 404);
-        }
-
-        $lockKey = "seat_lock:{$request->showtime_id}:{$seat->seat_id}";
-        $lockedBy = Redis::get($lockKey);
-
-        if (!$lockedBy) {
-            return ApiResponse::success(null, 'Ghế không được khóa', 200);
-        }
-
-        if ($lockedBy !== $request->booking_id) {
-            return ApiResponse::error('Bạn không có quyền mở khóa ghế này', 403);
-        }
-
-        Redis::del($lockKey);
-        return ApiResponse::success(null, 'Ghế đã được mở khóa', 200);
     }
 
     /**

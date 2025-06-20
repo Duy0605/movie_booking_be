@@ -158,8 +158,6 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/showtimes/{showtimeId}/seats', [BookingSeatController::class, 'getSeatsByShowtime']); // Lấy danh sách ghế theo ID lịch chiếu
         Route::get('/', [BookingSeatController::class, 'index']);                   // Lấy danh sách tất cả ghế đã đặt
         Route::post('/', [BookingSeatController::class, 'store']);                  // Tạo mới ghế đã đặt
-        Route::post('/lock', [BookingSeatController::class, 'lockSeat']);           // Khóa ghế
-        Route::post('/unlock', [BookingSeatController::class, 'unlockSeat']);       // Mở khóa ghế
         Route::get('/{id}', [BookingSeatController::class, 'show']);                // Lấy thông tin một ghế đã đặt theo ID
         Route::put('/{id}', [BookingSeatController::class, 'update']);              // Cập nhật ghế đã đặt
         Route::delete('/soft/{id}', [BookingSeatController::class, 'destroy']);     // Xóa mềm ghế đã đặt
