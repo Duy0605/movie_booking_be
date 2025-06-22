@@ -5,7 +5,7 @@ cat > /var/www/.env << EOF
 APP_NAME=${APP_NAME:-Laravel}
 APP_ENV=${APP_ENV:-production}  
 APP_KEY=${APP_KEY:-}
-APP_DEBUG=${APP_DEBUG:-false}
+APP_DEBUG=${false}
 APP_URL=${APP_URL:-http://localhost}
 APP_CIPHER=${APP_CIPHER:-AES-256-CBC}
 
