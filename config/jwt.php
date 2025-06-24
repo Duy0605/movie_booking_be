@@ -113,6 +113,7 @@ return [
         ],
     ],
 
+    // Access token TTL - 60 phút (1 giờ)
     'ttl' => env('JWT_TTL', 60),
 
     /*
@@ -132,6 +133,7 @@ return [
     |
     */
 
+    // Refresh token TTL - 20160 phút (14 ngày)
     'refresh_ttl' => env('JWT_REFRESH_TTL', 20160),
 
     /*
@@ -179,8 +181,7 @@ return [
     */
 
     'persistent_claims' => [
-        // 'foo',
-        // 'bar',
+        'type', // Thêm claim 'type' để phân biệt access và refresh token
     ],
 
     /*

@@ -36,10 +36,14 @@ class AuthController extends Controller
                 'profile_picture_url' => $request->profile_picture_url ?? null,
             ]);
 
-            $accessToken = JWTAuth::fromUser($user);
+            // Tạo access token với TTL ngắn (60 phút)
+            $accessToken = JWTAuth::customClaims(['type' => 'access'])->fromUser($user);
             
-            // Tạo refresh token riêng biệt với thời gian sống lâu hơn
-            $refreshToken = JWTAuth::claims(['type' => 'refresh'])->fromUser($user);
+            // Tạo refresh token với TTL dài hơn (2 tuần)
+            $refreshToken = JWTAuth::customClaims([
+                'type' => 'refresh',
+                'exp' => now()->addDays(14)->timestamp // 14 ngày
+            ])->fromUser($user);
 
             return ApiResponse::success([
                 'user' => [
@@ -71,14 +75,21 @@ class AuthController extends Controller
         $credentials = $request->only('email', 'password');
 
         try {
-            if (!$accessToken = JWTAuth::attempt($credentials)) {
+            // Không sử dụng JWTAuth::attempt() vì nó tạo token mặc định
+            if (!Auth::attempt($credentials)) {
                 return ApiResponse::error('Email hoặc mật khẩu không đúng', 401);
             }
 
             $user = Auth::user();
             
-            // Tạo refresh token riêng biệt
-            $refreshToken = JWTAuth::claims(['type' => 'refresh'])->fromUser($user);
+            // Tạo access token với TTL ngắn
+            $accessToken = JWTAuth::customClaims(['type' => 'access'])->fromUser($user);
+            
+            // Tạo refresh token với TTL dài hơn
+            $refreshToken = JWTAuth::customClaims([
+                'type' => 'refresh',
+                'exp' => now()->addDays(14)->timestamp // 14 ngày
+            ])->fromUser($user);
 
             return ApiResponse::success([
                 'access_token' => $accessToken,
@@ -113,36 +124,61 @@ class AuthController extends Controller
     public function refresh(Request $request)
     {
         try {
-            // Lấy token từ Authorization header
-            $refreshToken = JWTAuth::getToken();
+            // Lấy refresh token từ request body thay vì header
+            $refreshToken = $request->input('refresh_token');
             
             if (!$refreshToken) {
                 return ApiResponse::error('Refresh token không được cung cấp', 401);
             }
 
+            // Set token để xử lý
+            JWTAuth::setToken($refreshToken);
+            
             // Xác thực refresh token
-            $payload = JWTAuth::getPayload($refreshToken);
+            try {
+                $payload = JWTAuth::getPayload();
+            } catch (TokenExpiredException $e) {
+                return ApiResponse::error('Refresh token đã hết hạn, vui lòng đăng nhập lại', 401);
+            } catch (TokenInvalidException $e) {
+                return ApiResponse::error('Refresh token không hợp lệ', 401);
+            }
             
             // Kiểm tra xem đây có phải là refresh token không
             if ($payload->get('type') !== 'refresh') {
-                return ApiResponse::error('Token không hợp lệ', 401);
+                return ApiResponse::error('Token không phải là refresh token', 401);
             }
 
             // Lấy user từ token
             $user = JWTAuth::toUser($refreshToken);
             
+            if (!$user) {
+                return ApiResponse::error('Không tìm thấy người dùng', 401);
+            }
+            
             // Tạo access token mới
-            $newAccessToken = JWTAuth::fromUser($user);
+            $newAccessToken = JWTAuth::customClaims(['type' => 'access'])->fromUser($user);
             
             // Tạo refresh token mới
-            $newRefreshToken = JWTAuth::claims(['type' => 'refresh'])->fromUser($user);
+            $newRefreshToken = JWTAuth::customClaims([
+                'type' => 'refresh',
+                'exp' => now()->addDays(14)->timestamp
+            ])->fromUser($user);
             
             // Invalidate refresh token cũ
             JWTAuth::invalidate($refreshToken);
 
             return ApiResponse::success([
                 'access_token' => $newAccessToken,
-                'refresh_token' => $newRefreshToken
+                'refresh_token' => $newRefreshToken,
+                'user' => [
+                    'user_id' => $user->user_id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'full_name' => $user->full_name,
+                    'dob' => $user->dob,
+                    'phone' => $user->phone,
+                    'profile_picture_url' => $user->profile_picture_url
+                ]
             ], 'Làm mới token thành công');
             
         } catch (JWTException $e) {

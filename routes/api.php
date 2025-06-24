@@ -20,8 +20,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']); // Đăng ký người dùng
     Route::post('/login', [AuthController::class, 'login']);       // Đăng nhập người dùng
-    Route::post('/logout', [AuthController::class, 'logout'])->middleware('jwt.auth');      // Đăng xuất người dùng
-    Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('jwt.auth');    // Refresh token
+    Route::post('/logout', [AuthController::class, 'logout']);      // Đăng xuất người dùng
+    Route::post('/refresh', [AuthController::class, 'refresh']);    // Refresh token
 });
 
 // Các route công khai (không yêu cầu JWT)
