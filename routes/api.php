@@ -17,7 +17,7 @@ use App\Http\Controllers\SettingController;
 use Illuminate\Support\Facades\Route;
 
 // Các route không yêu cầu xác thực
-Route::prefix('auth')->group(function () {
+Route::middleware('throttle:auth')->prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']); // Đăng ký người dùng
     Route::post('/login', [AuthController::class, 'login']);       // Đăng nhập người dùng
     Route::post('/logout', [AuthController::class, 'logout']);      // Đăng xuất người dùng
@@ -25,7 +25,7 @@ Route::prefix('auth')->group(function () {
 });
 
 // Các route công khai (không yêu cầu JWT)
-Route::prefix('movies')->group(function () {
+Route::middleware('throttle:public')->prefix('movies')->group(function () {
     Route::get('/', [MovieController::class, 'index']);                    // Lấy danh sách tất cả phim
     Route::get('/get-all-movies', [MovieController::class, 'getAllMovies']);    // Lấy danh sách tất cả phim (bao gồm đã xóa mềm)
     Route::get('/search', [MovieController::class, 'searchByTitleFE']);    // Tìm kiếm phim theo tiêu đề (frontend)
@@ -34,7 +34,7 @@ Route::prefix('movies')->group(function () {
     Route::get('/{id}', [MovieController::class, 'show']);                 // Lấy thông tin 1 phim theo ID
 });
 
-Route::prefix('showtimes')->group(function () {
+Route::middleware('throttle:public')->prefix('showtimes')->group(function () {
     Route::get('/', [ShowTimeController::class, 'index']);                 // Lấy danh sách tất cả lịch chiếu
     Route::get('/{id}', [ShowTimeController::class, 'show']);              // Lấy thông tin 1 lịch chiếu theo ID
     Route::get('/search', [ShowTimeController::class, 'searchShowtimes']); // Tìm kiếm lịch chiếu
@@ -42,24 +42,24 @@ Route::prefix('showtimes')->group(function () {
     Route::get('/cinema/{cinema_id}/date/{date}', [ShowTimeController::class, 'filterByCinemaAndDate']);
 });
 
-Route::prefix('cinemas')->group(function () {
+Route::middleware('throttle:public')->prefix('cinemas')->group(function () {
     Route::get('/', [CinemaController::class, 'index']);                   // Lấy danh sách tất cả rạp chiếu
     Route::get('/{id}', [CinemaController::class, 'show']);                // Lấy thông tin 1 rạp theo ID
     Route::get('/search-by-address', [CinemaController::class, 'searchCinemaByAddress']); // Tìm kiếm rạp theo địa chỉ
     Route::get('/search-by-name', [CinemaController::class, 'searchCinemaByName']);       // Tìm kiếm rạp theo tên
 });
 
-Route::prefix('reviews')->group(function () {
+Route::middleware('throttle:public')->prefix('reviews')->group(function () {
     Route::get('/', [ReviewController::class, 'index']);                   // Lấy danh sách tất cả đánh giá
     Route::get('/{id}', [ReviewController::class, 'show']);                // Lấy thông tin một đánh giá theo ID
     Route::get('/reviews/movie/{movieId}', [ReviewController::class, 'getReviewsByMovie']); // Lấy danh sách đánh giá theo ID phim
 });
 
-Route::prefix('setting')->group(function () {
+Route::middleware('throttle:public')->prefix('setting')->group(function () {
     Route::get('/', [SettingController::class, 'show']);                        // Lấy thông tin cài đặt
 });
 
-  Route::prefix('users')->group(function () {
+  Route::middleware('throttle:auth')->prefix('users')->group(function () {
         Route::post('/forgot-password', [UserAccountController::class, 'forgotPassword']); // Quên mật khẩu
     });
 
