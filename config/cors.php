@@ -33,7 +33,24 @@ return [
     | Dùng ['*'] để cho phép tất cả, hoặc chỉ định như: ['http://localhost:3000']
     |
     */
-    'allowed_origins' => ['https://movie-ticket-murex.vercel.app'],
+    'allowed_origins' => [
+        'https://movie-ticket-murex.vercel.app',
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3000',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed Origins Patterns
+    |--------------------------------------------------------------------------
+    |
+    | Patterns cho phép các subdomain
+    |
+    */
+    'allowed_origins_patterns' => [
+        '/^https:\/\/.*\.vercel\.app$/',
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -75,6 +92,6 @@ return [
     | Nếu bật true, bạn **không được dùng '*' trong allowed_origins**.
     |
     */
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];
