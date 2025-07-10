@@ -11,7 +11,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: true
+        value: false
       - key: APP_CIPHER
         value: AES-256-CBC
       - key: APP_KEY
